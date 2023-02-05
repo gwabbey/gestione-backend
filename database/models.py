@@ -14,8 +14,7 @@ class Client(Base):
 class Operator(Base):
     __tablename__ = "operators"
 
-    id = Column(Integer, primary_key=True, index=True)
-    operator_id = Column(Integer, unique=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, unique=True)
     first_name = Column(String)
     last_name = Column(String)
 
@@ -24,7 +23,7 @@ class Work(Base):
     __tablename__ = "work"
 
     id = Column(Integer, primary_key=True, index=True)
-    operator_id = Column(Integer, ForeignKey("operators.operator_id"))
+    operator_id = Column(Integer, ForeignKey("operators.id"))
     client = Column(String, ForeignKey("clients.name"))
     date = Column(Date)
     intervention_duration = Column(Time)

@@ -6,7 +6,7 @@ from .models import Work, Operator, Client
 
 
 def get_users(db: Session):
-    return db.query(models.Operator).all()
+    return db.query(models.Operator).order_by(models.Operator.id).all()
 
 
 def get_user_by_id(db: Session, user_id: int):
@@ -44,8 +44,7 @@ def get_table(db: Session, user_id: int, message: str):
 
 def get_joined_tables():
     db = SessionLocal()
-    result = db.query(Work, Operator).join(Operator, Work.operator_id == Operator.operator_id).first()
-    result2 = db.query(Work, Client).join(Client, Work.client == Client.name).first()
-    if result and result2:
-        return result, result2
+    result = db.query(Work, Operator).join(Operator, Work.operator_id == Operator.id).first()
+    if result:
+        return result
     return 'something went wrong'
