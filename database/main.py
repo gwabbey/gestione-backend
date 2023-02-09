@@ -36,11 +36,6 @@ def read_users(db: Session = Depends(get_db)):
     return crud.get_users(db)
 
 
-@app.get("/clients/", response_model=list[schemas.Client])
-def read_clients(db: Session = Depends(get_db)):
-    return crud.get_clients(db)
-
-
 @app.post("/users/", response_model=schemas.UserCreate)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_full_name(db, first_name=user.first_name, last_name=user.last_name)
@@ -63,3 +58,8 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 def joined_tables():
     result = get_joined_tables()
     return result
+
+
+@app.post("/work", response_model=schemas.Work)
+def create_activity(work: schemas.Work, db: Session = Depends(get_db)):
+    return crud.create_activity(db=db, work=work)

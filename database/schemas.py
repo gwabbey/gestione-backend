@@ -1,3 +1,6 @@
+import datetime
+import enum
+
 from pydantic import BaseModel
 
 
@@ -18,13 +21,18 @@ class User(BaseModel):
         orm_mode = True
 
 
-class ClientCreate(BaseModel):
-    name: str
-
-
-class Client(BaseModel):
-    id: int
-    name: str
+class Work(BaseModel):
+    date: datetime.date
+    intervention_duration: datetime.time
+    intervention_type: str
+    intervention_location: str
+    client: str
+    site: str
+    description: str
+    notes: str
+    trip_kms: str
+    cost: str
+    operator_id: int
 
     class Config:
         orm_mode = True

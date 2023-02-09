@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .database import SessionLocal
-from .models import Work, Operator, Client
+from .models import Work, Operator
 
 
 def get_users(db: Session):
@@ -26,18 +26,6 @@ def create_user(db: Session, user: schemas.UserCreate):
     return db_user
 
 
-def add_client(db: Session, client: schemas.ClientCreate):
-    db_client = models.Client(name=client.name)
-    db.add(db_client)
-    db.commit()
-    db.refresh(db_client)
-    return db_client
-
-
-def get_clients(db: Session):
-    return db.query(models.Client).all()
-
-
 def get_table(db: Session, user_id: int, message: str):
     return db.query(models.Operator).filter(models.Operator.id == user_id, models.Operator.message == message).first()
 
@@ -48,3 +36,14 @@ def get_joined_tables():
     if result:
         return result
     return 'something went wrong'
+
+
+def create_activity(db: Session, work: schemas.Work):
+    db_work = models.Work(date=work.date, intervention_duration=work.intervention_duration,
+                          intervention_type=work.intervention_type, intervention_location=work.intervention_location,
+                          client=work.client, site=work.site, description=work.description, notes=work.notes,
+                          trip_kms=work.trip_kms, cost=work.cost, operator_id=work.operator_id)
+    db.add(db_work)
+    db.commit()
+    db.refresh(db_work)
+    return db_work
