@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Time, Date, Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, ForeignKey, Time, Date
 
 from .database import Base
 
@@ -19,12 +18,18 @@ class Operator(Base):
     last_name = Column(String)
 
 
+class Site(Base):
+    __tablename__ = "sites"
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    name = Column(String)
+
+
 class Work(Base):
     __tablename__ = "work"
 
     id = Column(Integer, primary_key=True, index=True)
     operator_id = Column(Integer, ForeignKey("operators.id"))
-    client = Column(String, ForeignKey("clients.name"))
+    client = Column(String)
     date = Column(Date)
     intervention_duration = Column(Time)
     intervention_type = Column(String)
@@ -32,5 +37,5 @@ class Work(Base):
     site = Column(String)
     description = Column(String)
     notes = Column(String)
-    trip_kms = Column(Integer)
+    trip_kms = Column(String)
     cost = Column(String)

@@ -1,12 +1,19 @@
 from sqlalchemy.orm import Session
 
 from . import models, schemas
-from .database import SessionLocal
 from .models import Work, Operator
 
 
 def get_users(db: Session):
     return db.query(models.Operator).order_by(models.Operator.id).all()
+
+
+def get_clients(db: Session):
+    return db.query(models.Client).order_by(models.Client.id).all()
+
+
+def get_sites(db: Session):
+    return db.query(models.Site).order_by(models.Site.id).all()
 
 
 def get_user_by_id(db: Session, user_id: int):
@@ -30,14 +37,6 @@ def get_table(db: Session, user_id: int, message: str):
     return db.query(models.Operator).filter(models.Operator.id == user_id, models.Operator.message == message).first()
 
 
-def get_joined_tables():
-    db = SessionLocal()
-    result = db.query(Work, Operator).join(Operator, Work.operator_id == Operator.id).first()
-    if result:
-        return result
-    return 'something went wrong'
-
-
 def create_activity(db: Session, work: schemas.Work):
     db_work = models.Work(date=work.date, intervention_duration=work.intervention_duration,
                           intervention_type=work.intervention_type, intervention_location=work.intervention_location,
@@ -47,3 +46,10 @@ def create_activity(db: Session, work: schemas.Work):
     db.commit()
     db.refresh(db_work)
     return db_work
+
+
+def get_work_table(db: Session):
+    result = db.query(Work, Operator).join(Operator, Work.operator_id == Operator.id).all()
+    if result:
+        return result
+    return 'something went wrong'

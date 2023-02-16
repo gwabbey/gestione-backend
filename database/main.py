@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from . import crud, models, schemas
-from .crud import get_joined_tables
 from .database import SessionLocal, engine
 
 models.Base.metadata.create_all(bind=engine)
@@ -36,6 +35,16 @@ def read_users(db: Session = Depends(get_db)):
     return crud.get_users(db)
 
 
+@app.get("/clients/", response_model=list[schemas.Client])
+def get_clients(db: Session = Depends(get_db)):
+    return crud.get_clients(db)
+
+
+@app.get("/sites/", response_model=list[schemas.Site])
+def get_site(db: Session = Depends(get_db)):
+    return crud.get_sites(db)
+
+
 @app.post("/users/", response_model=schemas.UserCreate)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_full_name(db, first_name=user.first_name, last_name=user.last_name)
@@ -54,12 +63,11 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     return db_user
 
 
-@app.get("/joined_tables")
-def joined_tables():
-    result = get_joined_tables()
-    return result
-
-
 @app.post("/work", response_model=schemas.Work)
 def create_activity(work: schemas.Work, db: Session = Depends(get_db)):
     return crud.create_activity(db=db, work=work)
+
+
+@app.get("/work")
+def get_work(db: Session = Depends(get_db)):
+    return crud.get_work_table(db)
