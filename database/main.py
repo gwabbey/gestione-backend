@@ -30,6 +30,11 @@ def get_db():
         db.close()
 
 
+@app.get("/")
+def ok():
+    return {"message": "ok"}
+
+
 @app.get("/users/", response_model=list[schemas.User])
 def read_users(db: Session = Depends(get_db)):
     return crud.get_users(db)

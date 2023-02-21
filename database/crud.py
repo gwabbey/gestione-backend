@@ -49,7 +49,7 @@ def create_activity(db: Session, work: schemas.Work):
 
 
 def get_work_table(db: Session):
-    result = db.query(Work, Operator).join(Operator, Work.operator_id == Operator.id).all()
+    result = db.query(Work, Operator).join(Operator, Work.operator_id == Operator.id).order_by(Work.id.desc()).all()
     if result:
         return result
     return 'something went wrong'
