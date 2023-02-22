@@ -1,6 +1,14 @@
 import datetime
-
 from pydantic import BaseModel
+
+
+class User(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+
+    class Config:
+        orm_mode = True
 
 
 class UserCreate(BaseModel):
@@ -11,10 +19,9 @@ class UserCreate(BaseModel):
         orm_mode = True
 
 
-class User(BaseModel):
-    id: int
-    first_name: str
-    last_name: str
+class UserLogin(BaseModel):
+    username: str
+    password: str
 
     class Config:
         orm_mode = True

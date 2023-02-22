@@ -35,6 +35,15 @@ def ok():
     return {"message": "ok"}
 
 
+@app.post("/login")
+def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_full_name(db, first_name=user.first_name, last_name=user.last_name)
+    if db_user:
+        return {"message": "ok"}
+    else:
+        raise HTTPException(status_code=400, detail="wrong credentials")
+
+
 @app.get("/users/", response_model=list[schemas.User])
 def read_users(db: Session = Depends(get_db)):
     return crud.get_users(db)
