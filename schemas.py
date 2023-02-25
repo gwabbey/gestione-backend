@@ -1,0 +1,76 @@
+import datetime
+from typing import Optional
+from pydantic import BaseModel
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str | None = None
+
+
+class UserBase(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+
+class UserCreate(UserBase):
+    password: str
+
+
+class UserUpdate(UserBase):
+    pass
+
+
+class User(UserBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
+class WorkBase(BaseModel):
+    date: datetime.date
+    intervention_duration: datetime.time
+    intervention_type: str
+    intervention_location: str
+    client: str
+    site: str
+    description: str
+    notes: str
+    trip_kms: str
+    cost: str
+
+
+class WorkCreate(WorkBase):
+    pass
+
+
+class Work(WorkBase):
+    id: int
+    operator_id: int
+
+    class Config:
+        orm_mode = True
+
+
+class Client(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
+
+class Site(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True

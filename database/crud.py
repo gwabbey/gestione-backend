@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-
-from . import models, schemas
-from .models import Work, Operator
+import models
+import schemas
+from models import Work, Operator
 
 
 def get_users(db: Session):
