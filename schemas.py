@@ -20,8 +20,12 @@ class UserBase(BaseModel):
     password: Optional[str] = None
 
 
-class UserCreate(UserBase):
-    password: str
+class UserCreate(BaseModel):
+    first_name: str
+    last_name: str
+
+    class Config:
+        orm_mode = True
 
 
 class UserUpdate(UserBase):

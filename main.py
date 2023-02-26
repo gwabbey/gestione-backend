@@ -1,92 +1,42 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordRequestForm
+from starlette.middleware.cors import CORSMiddleware
 
 import crud
+import models
 import schemas
-from database import SessionLocal
-from models import User
+from auth import create_access_token, get_current_active_user, get_current_user
+from config import ACCESS_TOKEN_EXPIRE_MINUTES
+from database import SessionLocal, engine, get_db
 
-SECRET_KEY = "12f25961152236b5f4eec29cf5838aa13d16853744096e858240dec39ed85204"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+origins = [
+    "http://localhost:4200",
+]
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-
-def get_user(db, username: str):
-    return db.query(User).filter(User.username == username).first()
-
-
-def authenticate_user(db, username: str, password: str):
-    user = get_user(db, username)
-    if not user:
-        return False
-    if not verify_password(password, user.hashed_password):
-        return False
-    return user
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-def create_access_token(data: dict, expires_delta: timedelta):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme), db: SessionLocal = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        token_data = schemas.TokenData(username=username)
-    except JWTError:
-        raise credentials_exception
-    user = db.query(User).filter(User.username == token_data.username).first()
-    if user is None:
-        raise credentials_exception
-    return user
-
-
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    return current_user
+@app.get("/")
+def ok():
+    return {"message": "ok"}
 
 
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: SessionLocal = Depends(get_db)):
-    user = db.query(User).filter(User.username == form_data.username).first()
+    user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -106,8 +56,51 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+@app.get("/users/", response_model=list[schemas.User])
+def read_users(db: SessionLocal = Depends(get_db)):
+    return crud.get_users(db)
+
+
+@app.get("/clients/", response_model=list[schemas.Client])
+def get_clients(db: SessionLocal = Depends(get_db)):
+    return crud.get_clients(db)
+
+
+@app.get("/sites/", response_model=list[schemas.Site])
+def get_site(db: SessionLocal = Depends(get_db)):
+    return crud.get_sites(db)
+
+
+@app.post("/users/", response_model=schemas.UserCreate)
+def create_user(user: schemas.UserCreate, db: SessionLocal = Depends(get_db)):
+    db_user = crud.get_user_by_full_name(db, first_name=user.first_name, last_name=user.last_name)
+    if len(user.first_name) == 0 or len(user.last_name) == 0:
+        raise HTTPException(status_code=400, detail="fields cannot be empty")
+    if db_user:
+        raise HTTPException(status_code=400, detail="message already registered")
+    return crud.create_user(db=db, user=user)
+
+
+@app.get("/users/{user_id}", response_model=schemas.User)
+def read_user(user_id: int, db: SessionLocal = Depends(get_db)):
+    db_user = crud.get_user_by_id(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="user not found")
+    return db_user
+
+
+@app.post("/work", response_model=schemas.Work)
+def create_activity(work: schemas.Work, db: SessionLocal = Depends(get_db)):
+    return crud.create_activity(db=db, work=work)
+
+
+@app.get("/work")
+def get_work(db: SessionLocal = Depends(get_db)):
+    return crud.get_work_table(db)
+
+
 @app.get("/users/me/", response_model=schemas.User)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
+async def read_users_me(current_user: models.User = Depends(get_current_active_user)):
     return current_user
 
 
