@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
 from fastapi import Depends, HTTPException, status
@@ -7,8 +9,12 @@ from passlib.context import CryptContext
 
 import models
 import schemas
-from config import SECRET_KEY, ALGORITHM
 from database import SessionLocal, get_db
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -66,3 +72,25 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: SessionLocal
 
 async def get_current_active_user(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+
+async def is_admin(current_user: models.User = Depends(get_current_user)):
+    if not current_user.role == "admin":
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a fare questa operazione.")
+    return current_user
+
+
+def get_user_id_from_token(token: str) -> int:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        return int(user_id)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def get_current_user_id(token: str = Depends(oauth2_scheme)):
+    user_id = get_user_id_from_token(token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return user_id
