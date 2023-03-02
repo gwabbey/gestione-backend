@@ -1,5 +1,6 @@
 import datetime
 from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -56,6 +57,13 @@ class Work(BaseModel):
     notes: str
     trip_kms: str
     cost: str
+
+    class Config:
+        orm_mode = True
+
+
+class WorkDelete(BaseModel):
+    id: int
 
     class Config:
         orm_mode = True

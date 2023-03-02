@@ -17,7 +17,8 @@ intervention_types = get_all_records(SessionLocal, models.InterventionType)
 
 
 def get_works_by_user_id(db: SessionLocal, user_id: int):
-    return db.query(models.Work).filter(models.Work.operator_id == user_id).all()
+    return db.query(models.Work).filter(models.Work.operator_id == user_id).order_by(
+        models.Work.created_at.desc()).all()
 
 
 def get_work_table(db: SessionLocal):

@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time, DateTime
-from database import Base
 from passlib.context import CryptContext
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time, DateTime
+
+from database import Base
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

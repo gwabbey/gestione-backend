@@ -1,8 +1,8 @@
 import os
-from dotenv import load_dotenv
 from datetime import timedelta
 from typing import List
 
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette.middleware.cors import CORSMiddleware
