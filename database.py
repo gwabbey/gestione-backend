@@ -16,8 +16,10 @@ Base = declarative_base()
 
 
 def get_db():
-    db = SessionLocal()
+    db = None
     try:
+        db = SessionLocal()
         yield db
     finally:
-        db.close()
+        if db is not None:
+            db.close()

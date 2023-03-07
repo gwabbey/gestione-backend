@@ -1,32 +1,33 @@
 import datetime
-from typing import Type
 
+from fastapi import HTTPException
+from passlib import pwd
+
+import auth
 import models
 import schemas
-from database import SessionLocal, Base
-
-
-def get_all_records(db: SessionLocal, model: Type[Base]):
-    return db.query(model).order_by(model.id).all()
-
-
-users = get_all_records(SessionLocal, models.User)
-clients = get_all_records(SessionLocal, models.Client)
-sites = get_all_records(SessionLocal, models.Site)
-intervention_types = get_all_records(SessionLocal, models.InterventionType)
+from database import SessionLocal
 
 
 def get_works_by_user_id(db: SessionLocal, user_id: int):
-    return db.query(models.Work).filter(models.Work.operator_id == user_id).order_by(
+    return db.query(models.Work, models.Site.description.label("site_description"),
+                    models.Client.name.label("client_name")).filter(models.Work.operator_id == user_id).join(
+        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
+                                                                 models.Work.client_id == models.Client.id).order_by(
         models.Work.created_at.desc()).all()
 
 
 def get_work_table(db: SessionLocal):
-    result = db.query(models.Work, models.User).join(models.User, models.Work.operator_id == models.User.id).order_by(
-        models.Work.id.desc()).all()
+    result = (
+        db.query(models.Work, models.Site.description, models.Client.name)
+        .join(models.Site, models.Work.site_id == models.Site.id)
+        .join(models.Client, models.Work.client_id == models.Client.id)
+        .order_by(models.Work.id.desc())
+        .all()
+    )
     if result:
         return result
-    return 'something went wrong'
+    return 'C\'è stato un errore.'
 
 
 def get_user_by_id(db: SessionLocal, user_id: int):
@@ -34,27 +35,84 @@ def get_user_by_id(db: SessionLocal, user_id: int):
 
 
 def create_user(db: SessionLocal, user: schemas.UserCreate):
-    db_user = models.User(first_name=user.first_name, last_name=user.last_name)
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username già registrato.")
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email già registrata.")
+    tmp_password = pwd.genword()
+    tmp_password_hashed = auth.get_password_hash(tmp_password)
+    if user.role == 'Operatore':
+        user.role = 'user'
+    if user.role == 'Dirigente':
+        user.role = 'admin'
+    db_user = models.User(first_name=user.first_name, last_name=user.last_name, email=user.email,
+                          phone_number=user.phone_number, username=user.username, role=user.role,
+                          temp_password=tmp_password, password=tmp_password_hashed)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
 
-def create_activity(db: SessionLocal, work: schemas.Work, current_user: models.User):
-    db_work = models.Work(date=work.date,
-                          intervention_duration=work.intervention_duration,
-                          intervention_type=work.intervention_type,
-                          intervention_location=work.intervention_location,
-                          client=work.client,
-                          site=work.site,
-                          description=work.description,
-                          notes=work.notes,
-                          trip_kms=work.trip_kms,
-                          cost=work.cost,
-                          operator_id=current_user.id,
-                          created_at=datetime.datetime.utcnow())
+def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
+    if user_id == 1 or user_id == current_user_id:
+        raise HTTPException(status_code=403, detail="Non puoi eliminare questo utente.")
+    user = db.query(models.User).get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato.")
+    db.delete(user)
+    db.commit()
+    return 'Utente eliminato.'
+
+
+def delete_work(db: SessionLocal, work_id: int, user_id: int):
+    work = db.query(models.Work).get(work_id)
+    if not work:
+        raise HTTPException(status_code=404, detail="Intervento non trovato.")
+    if work.operator_id != user_id:
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
+    db.delete(work)
+    db.commit()
+    return 'Intervento eliminato.'
+
+
+def create_activity(db: SessionLocal, work: schemas.Work, user_id: int):
+    if work.trip_kms == '':
+        work.trip_kms = 0.0
+    if work.cost == '':
+        work.cost = 0.0
+    db_work = models.Work(date=work.date, intervention_duration=work.intervention_duration,
+                          intervention_type=work.intervention_type, intervention_location=work.intervention_location,
+                          client_id=work.client_id, site_id=work.site_id, description=work.description,
+                          notes=work.notes, trip_kms=work.trip_kms, cost=work.cost, operator_id=user_id,
+                          created_at=datetime.datetime.now())
     db.add(db_work)
     db.commit()
     db.refresh(db_work)
     return db_work
+
+
+def create_site(db: SessionLocal, site: schemas.SiteCreate):
+    db_site = db.query(models.Site).filter(models.Site.code == site.code).first()
+    if db_site:
+        raise HTTPException(status_code=400, detail="Codice commessa già registrato.")
+    db_site = models.Site(date_created=datetime.datetime.now(),
+                          code=site.code, description=site.description, client=site.client)
+    db.add(db_site)
+    db.commit()
+    db.refresh(db_site)
+    return db_site
+
+
+def create_client(db: SessionLocal, client: schemas.Client):
+    db_client = db.query(models.Client).filter(models.Client.name == client.name).first()
+    if db_client:
+        raise HTTPException(status_code=400, detail="Cliente già registrato.")
+    db_client = models.Client(name=client.name, address=client.address, city=client.city, email=client.email,
+                              phone_number=client.phone_number, contact=client.contact)
+    db.add(db_client)
+    db.commit()
+    db.refresh(db_client)
+    return db_client
