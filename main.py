@@ -2,7 +2,7 @@ import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette.middleware.cors import CORSMiddleware
 
@@ -89,8 +89,11 @@ def get_locations(db: SessionLocal = Depends(get_db)):
 
 
 @app.get("/work")
-def get_work(current_user: models.User = Depends(is_admin), db: SessionLocal = Depends(get_db)):
-    return crud.get_work_table(db)
+def get_work(current_user: models.User = Depends(is_admin),
+             db: SessionLocal = Depends(get_db),
+             sort_by: str = Query("created_at"),
+             sort_order: str = Query("desc")):
+    return crud.get_work_table(db, sort_by=sort_by, sort_order=sort_order)
 
 
 @app.get("/users/me/", response_model=schemas.User)
@@ -99,8 +102,10 @@ async def get_profile(current_user: models.User = Depends(get_current_active_use
 
 
 @app.get("/users/me/work/")
-def get_works(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
-    return crud.get_works_by_user_id(db=db, user_id=current_user.id)
+def get_works(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
+              sort_by: str = Query("created_at"),
+              sort_order: str = Query("desc")):
+    return crud.get_works_by_user_id(db=db, user_id=current_user.id, sort_by=sort_by, sort_order=sort_order)
 
 
 @app.post("/work/create/", response_model=schemas.Work)

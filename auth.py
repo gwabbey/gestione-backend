@@ -53,7 +53,7 @@ def create_access_token(data: dict, expires_delta: timedelta):
 async def get_current_user(token: str = Depends(oauth2_scheme), db: SessionLocal = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="could not validate credentials",
+        detail="Credenziali non valide.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -86,11 +86,11 @@ def get_user_id_from_token(token: str) -> int:
         user_id = payload.get("sub")
         return int(user_id)
     except JWTError:
-        raise HTTPException(status_code=401, detail="invalid or expired token")
+        raise HTTPException(status_code=401, detail="Token non valido o scaduto.")
 
 
 async def get_current_user_id(token: str = Depends(oauth2_scheme)):
     user_id = get_user_id_from_token(token)
     if not user_id:
-        raise HTTPException(status_code=401, detail="invalid or expired token")
+        raise HTTPException(status_code=401, detail="Token non valido o scaduto.")
     return user_id

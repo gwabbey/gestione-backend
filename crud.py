@@ -2,6 +2,7 @@ import datetime
 
 from fastapi import HTTPException
 from passlib import pwd
+from sqlalchemy import desc
 
 import auth
 import models
@@ -9,22 +10,57 @@ import schemas
 from database import SessionLocal
 
 
-def get_works_by_user_id(db: SessionLocal, user_id: int):
-    return db.query(models.Work, models.Site.description.label("site_description"),
-                    models.Client.name.label("client_name")).filter(models.Work.operator_id == user_id).join(
+def get_works_by_user_id(db: SessionLocal, user_id: int, sort_by: str = "created_at", sort_order: str = "desc"):
+    valid_sort_columns = ["created_at", "last_name", "date"]
+    if sort_by not in valid_sort_columns:
+        sort_by = "created_at"
+    if sort_order != "asc":
+        sort_order = "desc"
+
+    sort_columns = {
+        "created_at": models.Work.created_at,
+        "last_name": models.User.last_name,
+        "date": models.Work.date
+    }
+
+    sort_column = sort_columns[sort_by]
+    if sort_order == "desc":
+        sort_column = desc(sort_column)
+
+    result = db.query(models.Work, models.Site.description.label("site_description"),
+                      models.Client.name.label("client_name")).filter(models.Work.operator_id == user_id).join(
         models.Site, models.Work.site_id == models.Site.id).join(models.Client,
                                                                  models.Work.client_id == models.Client.id).order_by(
-        models.Work.created_at.desc()).all()
+        sort_column).all()
+    if result:
+        return result
+    return 'C\'è stato un errore.'
 
 
-def get_work_table(db: SessionLocal):
-    result = (
-        db.query(models.Work, models.Site.description, models.Client.name)
-        .join(models.Site, models.Work.site_id == models.Site.id)
-        .join(models.Client, models.Work.client_id == models.Client.id)
-        .order_by(models.Work.id.desc())
-        .all()
-    )
+def get_work_table(db: SessionLocal, sort_by: str = "created_at", sort_order: str = "desc"):
+    valid_sort_columns = ["created_at", "last_name", "date"]
+    if sort_by not in valid_sort_columns:
+        sort_by = "created_at"
+    if sort_order != "asc":
+        sort_order = "desc"
+
+    sort_columns = {
+        "created_at": models.Work.created_at,
+        "last_name": models.User.last_name,
+        "date": models.Work.date
+    }
+
+    sort_column = sort_columns[sort_by]
+    if sort_order == "desc":
+        sort_column = desc(sort_column)
+
+    result = db.query(models.Work, models.Site.description.label("site_description"),
+                      models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
+        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
+                                                                 models.Work.client_id == models.Client.id).join(
+        models.User,
+        models.Work.operator_id == models.User.id).order_by(sort_column).all()
+
     if result:
         return result
     return 'C\'è stato un errore.'
