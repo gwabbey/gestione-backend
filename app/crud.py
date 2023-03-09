@@ -4,10 +4,10 @@ from fastapi import HTTPException
 from passlib import pwd
 from sqlalchemy import desc
 
-import auth
-import models
-import schemas
-from database import SessionLocal
+import app.auth as auth
+import app.models as models
+import app.schemas as schemas
+from app.database import SessionLocal
 
 
 def get_works_by_user_id(db: SessionLocal, user_id: int, sort_by: str = "created_at", sort_order: str = "desc"):

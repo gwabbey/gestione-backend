@@ -7,9 +7,9 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-import models
-import schemas
-from database import SessionLocal, get_db
+import app.models as models
+import app.schemas as schemas
+from app.database import SessionLocal, get_db
 
 load_dotenv()
 

@@ -6,11 +6,11 @@ from fastapi import Depends, FastAPI, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette.middleware.cors import CORSMiddleware
 
-import crud
-import models
-import schemas
-from auth import create_access_token, get_current_active_user, get_current_user, is_admin
-from database import SessionLocal, engine, get_db
+import app.crud as crud
+import app.models as models
+import app.schemas as schemas
+from app.auth import create_access_token, get_current_active_user, get_current_user, is_admin
+from app.database import SessionLocal, engine, get_db
 
 load_dotenv()
 ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS"))
