@@ -18,6 +18,10 @@ ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS"))
 
 models.Base.metadata.create_all(bind=engine)
 
+user = get_db().query(models.User).filter(models.User.username == "gab").first()
+if not user:
+    user = crud.create_user(get_db(), schemas.UserCreate(username="gab", password="alex", role="admin"))
+
 
 class Settings(BaseSettings):
     openapi_url: str = os.getenv("OPENAPI_URL")

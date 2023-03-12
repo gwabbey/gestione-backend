@@ -34,7 +34,7 @@ def get_works_by_user_id(db: SessionLocal, user_id: int, sort_by: str = "created
         sort_column).all()
     if result:
         return result
-    return 'C\'è stato un errore.'
+    return ''
 
 
 def get_work_table(db: SessionLocal, sort_by: str = "created_at", sort_order: str = "desc"):
@@ -92,6 +92,7 @@ def update_activity(db: SessionLocal, work_id: int, work: schemas.Work, user_id:
         return db_work
     return 'C\'è stato un errore.'
 
+
 def get_user_by_id(db: SessionLocal, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
 
@@ -134,8 +135,6 @@ def delete_work(db: SessionLocal, work_id: int, user_id: int):
     user = db.query(models.User).get(user_id)
     if not work:
         raise HTTPException(status_code=404, detail="Intervento non trovato.")
-    if user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
     if work.operator_id != user_id and user.role != 'admin':
         raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
     db.delete(work)
