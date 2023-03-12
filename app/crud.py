@@ -66,6 +66,32 @@ def get_work_table(db: SessionLocal, sort_by: str = "created_at", sort_order: st
     return 'C\'è stato un errore.'
 
 
+def get_work_by_id(db: SessionLocal, work_id: int):
+    return db.query(models.Work, models.Site.description.label("site_description"),
+                    models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
+        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
+                                                                 models.Work.client_id == models.Client.id).join(
+        models.User, models.Work.operator_id == models.User.id).filter(models.Work.id == work_id).first()
+
+
+def update_activity(db: SessionLocal, work_id: int, work: schemas.Work, user_id: int):
+    db_work = db.query(models.Work).filter(models.Work.id == work_id).first()
+    if db_work:
+        db_work.date = work.date
+        db_work.intervention_duration = work.intervention_duration
+        db_work.intervention_type = work.intervention_type
+        db_work.intervention_location = work.intervention_location
+        db_work.client_id = work.client_id
+        db_work.site_id = work.site_id
+        db_work.description = work.description
+        db_work.notes = work.notes
+        db_work.trip_kms = work.trip_kms
+        db_work.cost = work.cost
+        db_work.operator_id = user_id
+        db.commit()
+        return db_work
+    return 'C\'è stato un errore.'
+
 def get_user_by_id(db: SessionLocal, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
 
@@ -105,9 +131,12 @@ def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
 
 def delete_work(db: SessionLocal, work_id: int, user_id: int):
     work = db.query(models.Work).get(work_id)
+    user = db.query(models.User).get(user_id)
     if not work:
         raise HTTPException(status_code=404, detail="Intervento non trovato.")
-    if work.operator_id != user_id:
+    if user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
+    if work.operator_id != user_id and user.role != 'admin':
         raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
     db.delete(work)
     db.commit()
