@@ -4,6 +4,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseSettings
 from starlette.middleware.cors import CORSMiddleware
 
 import app.crud as crud
@@ -17,7 +18,14 @@ ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS"))
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+
+class Settings(BaseSettings):
+    openapi_url: str = os.getenv("OPENAPI_URL")
+
+
+settings = Settings()
+
+app = FastAPI(openapi_url=settings.openapi_url)
 
 origins = [
     "http://localhost",
