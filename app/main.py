@@ -20,7 +20,9 @@ models.Base.metadata.create_all(bind=engine)
 
 user = SessionLocal.query(models.User).filter(models.User.username == "gabby").first()
 if not user:
-    user = crud.create_user(SessionLocal, schemas.UserCreate(username="gabby", password="as", role="admin"))
+    user = crud.create_user(SessionLocal,
+                            schemas.UserCreate(username="gabby", password="as", role="admin", email="fumaz.dev",
+                                               phone_number="1234567890", first_name="Gabriele", last_name="Fumaz"))
 
 
 class Settings(BaseSettings):
