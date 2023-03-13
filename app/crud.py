@@ -34,7 +34,7 @@ def get_works_by_user_id(db: SessionLocal, user_id: int, sort_by: str = "created
         sort_column).all()
     if result:
         return result
-    return ''
+    return 'C\'è stato un errore.'
 
 
 def get_work_table(db: SessionLocal, sort_by: str = "created_at", sort_order: str = "desc"):
@@ -104,7 +104,7 @@ def create_user(db: SessionLocal, user: schemas.UserCreate):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email già registrata.")
-    tmp_password = pwd.genword()
+    tmp_password = user.password if user.password else pwd.genword()
     tmp_password_hashed = auth.get_password_hash(tmp_password)
     if user.role == 'Operatore':
         user.role = 'user'
@@ -135,6 +135,8 @@ def delete_work(db: SessionLocal, work_id: int, user_id: int):
     user = db.query(models.User).get(user_id)
     if not work:
         raise HTTPException(status_code=404, detail="Intervento non trovato.")
+    if user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
     if work.operator_id != user_id and user.role != 'admin':
         raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
     db.delete(work)

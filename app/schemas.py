@@ -29,6 +29,7 @@ class UserCreate(BaseModel):
     phone_number: Optional[str] = None
     username: Optional[str] = None
     role: Optional[str] = None
+    password: Optional[str] = None
 
     class Config:
         orm_mode = True
