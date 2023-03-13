@@ -32,8 +32,7 @@ settings = Settings()
 app = FastAPI(openapi_url=settings.openapi_url)
 
 origins = [
-    "http://localhost",
-    "http://localhost:4200",
+    "*",
 ]
 
 app.add_middleware(
