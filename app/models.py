@@ -1,5 +1,6 @@
 from passlib.context import CryptContext
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time, DateTime
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -27,8 +28,7 @@ class Work(Base):
     id = Column(Integer, primary_key=True, index=True, unique=True)
     operator_id = Column(Integer, ForeignKey("operators.id"))
     date = Column(Date)
-    created_at = Column(DateTime)
-    client_id = Column(Integer, ForeignKey("clients.id"))
+    date_created = Column(DateTime)
     intervention_duration = Column(Time)
     intervention_type = Column(String)
     intervention_location = Column(String)
@@ -48,6 +48,7 @@ class Client(Base):
     email = Column(String)
     contact = Column(String)
     phone_number = Column(String)
+    date_created = Column(DateTime)
 
 
 class Site(Base):
@@ -55,7 +56,7 @@ class Site(Base):
     id = Column(Integer, primary_key=True, index=True, unique=True)
     code = Column(String)
     description = Column(String)
-    client = Column(String)
+    client_id = Column(Integer, ForeignKey("clients.id"))
     date_created = Column(DateTime)
 
 

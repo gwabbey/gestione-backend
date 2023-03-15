@@ -4,7 +4,6 @@ from datetime import timedelta
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseSettings
 from starlette.middleware.cors import CORSMiddleware
 
 import app.crud as crud
@@ -18,20 +17,14 @@ ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS"))
 
 models.Base.metadata.create_all(bind=engine)
 
-user = SessionLocal.query(models.User).filter(models.User.username == "gabby").first()
-if not user:
-    user = crud.create_user(SessionLocal,
-                            schemas.UserCreate(username="gabby", password="as", role="admin", email="fumaz.dev",
-                                               phone_number="1234567890", first_name="Gabriele", last_name="Fumaz"))
+# class Settings(BaseSettings):
+#     openapi_url: str = os.getenv("OPENAPI_URL")
 
 
-class Settings(BaseSettings):
-    openapi_url: str = os.getenv("OPENAPI_URL")
+# settings = Settings()
 
-
-settings = Settings()
-
-app = FastAPI(openapi_url=settings.openapi_url)
+app = FastAPI()
+# openapi_url=settings.openapi_url // add this back later :D
 
 origins = [
     "*",
@@ -67,16 +60,14 @@ def get_users(db: SessionLocal = Depends(get_db), current_user: schemas.User = D
     return db.query(models.User).order_by(models.User.id).all()
 
 
-@app.get("/clients", response_model=list[schemas.Client])
+@app.get("/clients")
 def get_clients(db: SessionLocal = Depends(get_db)):
-    clients = db.query(models.Client).order_by(models.Client.id).all()
-    return clients
+    return db.query(models.Client).order_by(models.Client.id).all()
 
 
-@app.get("/sites", response_model=list[schemas.Site])
+@app.get("/sites")
 def get_sites(db: SessionLocal = Depends(get_db)):
-    sites = db.query(models.Site).order_by(models.Site.id).all()
-    return sites
+    return crud.get_sites(db)
 
 
 @app.get("/roles", response_model=list[schemas.Role])
@@ -99,10 +90,8 @@ def get_locations(db: SessionLocal = Depends(get_db)):
 
 @app.get("/work")
 def get_work(current_user: models.User = Depends(is_admin),
-             db: SessionLocal = Depends(get_db),
-             sort_by: str = Query("created_at"),
-             sort_order: str = Query("desc")):
-    return crud.get_work_table(db, sort_by=sort_by, sort_order=sort_order)
+             db: SessionLocal = Depends(get_db)):
+    return crud.get_work_table(db)
 
 
 @app.get("/work/{work_id}")
@@ -119,27 +108,25 @@ async def get_profile(current_user: models.User = Depends(get_current_active_use
 
 
 @app.get("/users/me/work")
-def get_works(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
-              sort_by: str = Query("created_at"),
-              sort_order: str = Query("desc")):
+def get_user_works(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
+                   sort_by: str = Query("date_created"),
+                   sort_order: str = Query("desc")):
     return crud.get_works_by_user_id(db=db, user_id=current_user.id, sort_by=sort_by, sort_order=sort_order)
 
 
+@app.get("/user/{user_id}", response_model=schemas.User)
+def get_user(user_id: int, db: SessionLocal = Depends(get_db),
+             current_user: models.User = Depends(is_admin)):
+    db_user = crud.get_user_by_id(db, user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="Utente non trovato.")
+    return db_user
+
+
 @app.post("/work/create", response_model=schemas.Work)
-def create_activity(work: schemas.Work, current_user: models.User = Depends(get_current_user),
+def create_work(work: schemas.Work, current_user: models.User = Depends(get_current_user),
                     db: SessionLocal = Depends(get_db)):
-    return crud.create_activity(db=db, work=work, user_id=current_user.id)
-
-
-@app.put("/work/update", response_model=schemas.Work)
-def update_activity(work_id: int, user_id: int, work: schemas.Work, db: SessionLocal = Depends(get_db)):
-    return crud.update_activity(db=db, work_id=work_id, work=work, user_id=user_id)
-
-
-@app.delete("/work/delete")
-def delete_work(work_id: int, db: SessionLocal = Depends(get_db),
-                current_user: models.User = Depends(get_current_user)):
-    return crud.delete_work(db=db, work_id=work_id, user_id=current_user.id)
+    return crud.create_work(db=db, work=work, user_id=current_user.id)
 
 
 @app.post("/users/create", response_model=schemas.UserRegister)
@@ -156,22 +143,36 @@ def create_site(site: schemas.SiteCreate, db: SessionLocal = Depends(get_db),
     return crud.create_site(db=db, site=site)
 
 
-@app.post("/clients/create", response_model=schemas.Site)
-def create_client(client: schemas.Client, db: SessionLocal = Depends(get_db),
+@app.post("/clients/create")
+def create_client(client: schemas.ClientCreate, db: SessionLocal = Depends(get_db),
                   current_user: models.User = Depends(is_admin)):
     return crud.create_client(db=db, client=client)
 
 
-@app.get("/user/{user_id}", response_model=schemas.User)
-def get_user(user_id: int, db: SessionLocal = Depends(get_db),
-             current_user: models.User = Depends(is_admin)):
-    db_user = crud.get_user_by_id(db, user_id=user_id)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="Utente non trovato.")
-    return db_user
+@app.put("/work/update", response_model=schemas.Work)
+def update_work(work_id: int, user_id: int, work: schemas.Work, db: SessionLocal = Depends(get_db)):
+    return crud.update_work(db=db, work_id=work_id, work=work, user_id=user_id)
+
+
+@app.delete("/work/delete")
+def delete_work(work_id: int, db: SessionLocal = Depends(get_db),
+                current_user: models.User = Depends(get_current_user)):
+    return crud.delete_work(db=db, work_id=work_id, user_id=current_user.id)
 
 
 @app.delete("/users/delete")
 def delete_user(user_id: int, db: SessionLocal = Depends(get_db),
                 current_user: models.User = Depends(is_admin)):
     return crud.delete_user(db=db, user_id=user_id, current_user_id=current_user.id)
+
+
+@app.delete("/clients/delete")
+def delete_client(client_id: int, db: SessionLocal = Depends(get_db),
+                  current_user: models.User = Depends(is_admin)):
+    return crud.delete_client(db=db, client_id=client_id)
+
+
+@app.delete("/sites/delete")
+def delete_sites(site_id: int, db: SessionLocal = Depends(get_db),
+                 current_user: models.User = Depends(is_admin)):
+    return crud.delete_site(db=db, site_id=site_id)

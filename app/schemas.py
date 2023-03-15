@@ -58,12 +58,12 @@ class Work(BaseModel):
     intervention_duration: datetime.time
     intervention_type: str
     intervention_location: str
-    client_id: int
     site_id: int
     description: Optional[str] = None
     notes: Optional[str] = None
     trip_kms: Optional[str] = None
     cost: Optional[str] = None
+    date_created: Optional[datetime.datetime] = None
 
     class Config:
         orm_mode = True
@@ -84,6 +84,17 @@ class Client(BaseModel):
     email: Optional[str] = None
     contact: Optional[str] = None
     phone_number: Optional[str] = None
+    date_created: Optional[datetime.datetime] = None
+
+
+class ClientCreate(BaseModel):
+    name: str
+    city: Optional[str] = None
+    address: Optional[str] = None
+    email: Optional[str] = None
+    contact: Optional[str] = None
+    phone_number: Optional[str] = None
+    date_created: Optional[datetime.datetime] = None
 
     class Config:
         orm_mode = True
@@ -94,7 +105,7 @@ class Site(BaseModel):
     date_created: Optional[datetime.datetime] = None
     code: Optional[str] = None
     description: Optional[str] = None
-    client: Optional[str] = None
+    client_id: Optional[int] = None
 
     class Config:
         orm_mode = True
@@ -103,7 +114,7 @@ class Site(BaseModel):
 class SiteCreate(BaseModel):
     code: Optional[str] = None
     description: Optional[str] = None
-    client: Optional[str] = None
+    client_id: Optional[int] = None
 
     class Config:
         orm_mode = True

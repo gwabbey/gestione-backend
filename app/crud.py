@@ -10,15 +10,15 @@ import app.schemas as schemas
 from app.database import SessionLocal
 
 
-def get_works_by_user_id(db: SessionLocal, user_id: int, sort_by: str = "created_at", sort_order: str = "desc"):
-    valid_sort_columns = ["created_at", "last_name", "date"]
+def get_works_by_user_id(db: SessionLocal, user_id: int, sort_by: str = "date_created", sort_order: str = "desc"):
+    valid_sort_columns = ["date_created", "last_name", "date"]
     if sort_by not in valid_sort_columns:
-        sort_by = "created_at"
+        sort_by = "date_created"
     if sort_order != "asc":
         sort_order = "desc"
 
     sort_columns = {
-        "created_at": models.Work.created_at,
+        "date_created": models.Work.date_created,
         "last_name": models.User.last_name,
         "date": models.Work.date
     }
@@ -28,38 +28,24 @@ def get_works_by_user_id(db: SessionLocal, user_id: int, sort_by: str = "created
         sort_column = desc(sort_column)
 
     result = db.query(models.Work, models.Site.description.label("site_description"),
+                      models.Site.code.label("site_code"),
                       models.Client.name.label("client_name")).filter(models.Work.operator_id == user_id).join(
         models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Work.client_id == models.Client.id).order_by(
+                                                                 models.Site.client_id == models.Client.id).order_by(
         sort_column).all()
     if result:
         return result
     return 'C\'è stato un errore.'
 
 
-def get_work_table(db: SessionLocal, sort_by: str = "created_at", sort_order: str = "desc"):
-    valid_sort_columns = ["created_at", "last_name", "date"]
-    if sort_by not in valid_sort_columns:
-        sort_by = "created_at"
-    if sort_order != "asc":
-        sort_order = "desc"
-
-    sort_columns = {
-        "created_at": models.Work.created_at,
-        "last_name": models.User.last_name,
-        "date": models.Work.date
-    }
-
-    sort_column = sort_columns[sort_by]
-    if sort_order == "desc":
-        sort_column = desc(sort_column)
-
+def get_work_table(db: SessionLocal):
     result = db.query(models.Work, models.Site.description.label("site_description"),
+                      models.Site.code.label("site_code"),
                       models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
         models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Work.client_id == models.Client.id).join(
+                                                                 models.Site.client_id == models.Client.id).join(
         models.User,
-        models.Work.operator_id == models.User.id).order_by(sort_column).all()
+        models.Work.operator_id == models.User.id).all()
 
     if result:
         return result
@@ -67,21 +53,20 @@ def get_work_table(db: SessionLocal, sort_by: str = "created_at", sort_order: st
 
 
 def get_work_by_id(db: SessionLocal, work_id: int):
-    return db.query(models.Work, models.Site.description.label("site_description"),
+    return db.query(models.Work, models.Site.description.label("site_description"), models.Site.code.label("site_code"),
                     models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
         models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Work.client_id == models.Client.id).join(
+                                                                 models.Site.client_id == models.Client.id).join(
         models.User, models.Work.operator_id == models.User.id).filter(models.Work.id == work_id).first()
 
 
-def update_activity(db: SessionLocal, work_id: int, work: schemas.Work, user_id: int):
+def update_work(db: SessionLocal, work_id: int, work: schemas.Work, user_id: int):
     db_work = db.query(models.Work).filter(models.Work.id == work_id).first()
     if db_work:
         db_work.date = work.date
         db_work.intervention_duration = work.intervention_duration
         db_work.intervention_type = work.intervention_type
         db_work.intervention_location = work.intervention_location
-        db_work.client_id = work.client_id
         db_work.site_id = work.site_id
         db_work.description = work.description
         db_work.notes = work.notes
@@ -130,6 +115,24 @@ def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
     return 'Utente eliminato.'
 
 
+def delete_client(db: SessionLocal, client_id: int):
+    client = db.query(models.Client).get(client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="Cliente non trovato.")
+    db.delete(client)
+    db.commit()
+    return 'Cliente eliminato.'
+
+
+def delete_site(db: SessionLocal, site_id: int):
+    site = db.query(models.Site).get(site_id)
+    if not site:
+        raise HTTPException(status_code=404, detail="Commessa non trovata.")
+    db.delete(site)
+    db.commit()
+    return 'Commessa eliminata.'
+
+
 def delete_work(db: SessionLocal, work_id: int, user_id: int):
     work = db.query(models.Work).get(work_id)
     user = db.query(models.User).get(user_id)
@@ -144,16 +147,16 @@ def delete_work(db: SessionLocal, work_id: int, user_id: int):
     return 'Intervento eliminato.'
 
 
-def create_activity(db: SessionLocal, work: schemas.Work, user_id: int):
+def create_work(db: SessionLocal, work: schemas.Work, user_id: int):
     if work.trip_kms == '':
         work.trip_kms = 0.0
     if work.cost == '':
         work.cost = 0.0
     db_work = models.Work(date=work.date, intervention_duration=work.intervention_duration,
                           intervention_type=work.intervention_type, intervention_location=work.intervention_location,
-                          client_id=work.client_id, site_id=work.site_id, description=work.description,
+                          site_id=work.site_id, description=work.description,
                           notes=work.notes, trip_kms=work.trip_kms, cost=work.cost, operator_id=user_id,
-                          created_at=datetime.datetime.now())
+                          date_created=datetime.datetime.now())
     db.add(db_work)
     db.commit()
     db.refresh(db_work)
@@ -165,19 +168,25 @@ def create_site(db: SessionLocal, site: schemas.SiteCreate):
     if db_site:
         raise HTTPException(status_code=400, detail="Codice commessa già registrato.")
     db_site = models.Site(date_created=datetime.datetime.now(),
-                          code=site.code, description=site.description, client=site.client)
+                          code=site.code, description=site.description, client_id=site.client_id)
     db.add(db_site)
     db.commit()
     db.refresh(db_site)
     return db_site
 
 
-def create_client(db: SessionLocal, client: schemas.Client):
-    db_client = db.query(models.Client).filter(models.Client.name == client.name).first()
-    if db_client:
+def get_sites(db: SessionLocal):
+    return db.query(models.Site, models.Client).join(models.Client,
+                                                     models.Site.client_id == models.Client.id).order_by(
+        models.Site.id).all()
+
+
+def create_client(db: SessionLocal, client: schemas.ClientCreate):
+    if db.query(models.Client).filter(models.Client.name == client.name).first():
         raise HTTPException(status_code=400, detail="Cliente già registrato.")
     db_client = models.Client(name=client.name, address=client.address, city=client.city, email=client.email,
-                              phone_number=client.phone_number, contact=client.contact)
+                              phone_number=client.phone_number, contact=client.contact,
+                              date_created=datetime.datetime.now())
     db.add(db_client)
     db.commit()
     db.refresh(db_client)
