@@ -60,6 +60,23 @@ def get_work_by_id(db: SessionLocal, work_id: int):
         models.User, models.Work.operator_id == models.User.id).filter(models.Work.id == work_id).first()
 
 
+def get_all_work_in_site(db: SessionLocal, site_id: int):
+    return db.query(models.Work, models.Site.description.label("site_description"), models.Site.code.label("site_code"),
+                    models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
+        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
+                                                                 models.Site.client_id == models.Client.id).join(
+        models.User, models.Work.operator_id == models.User.id).filter(models.Site.id == site_id).all()
+
+
+def get_user_work_in_site(db: SessionLocal, site_id: int, user_id: int):
+    return db.query(models.Work, models.Site.description.label("site_description"), models.Site.code.label("site_code"),
+                    models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
+        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
+                                                                 models.Site.client_id == models.Client.id).join(
+        models.User, models.Work.operator_id == models.User.id).filter(models.Site.id == site_id).filter(
+        models.Work.operator_id == user_id).all()
+
+
 def update_work(db: SessionLocal, work_id: int, work: schemas.Work, user_id: int):
     db_work = db.query(models.Work).filter(models.Work.id == work_id).first()
     if db_work:

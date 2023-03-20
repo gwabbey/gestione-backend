@@ -102,6 +102,18 @@ def get_work_by_id(work_id: int, db: SessionLocal = Depends(get_db)):
     return work_id
 
 
+@app.get("/site")
+def get_all_work_in_site(site_id: int, db: SessionLocal = Depends(get_db),
+                         current_user: models.User = Depends(is_admin)):
+    return crud.get_all_work_in_site(db, site_id=site_id)
+
+
+@app.get("/users/me/site")
+def get_user_work_in_site(site_id: int, db: SessionLocal = Depends(get_db),
+                          current_user: models.User = Depends(get_current_active_user)):
+    return crud.get_user_work_in_site(db, site_id=site_id, user_id=current_user.id)
+
+
 @app.get("/users/me", response_model=schemas.User)
 async def get_profile(current_user: models.User = Depends(get_current_active_user)):
     return current_user
@@ -115,8 +127,8 @@ def get_user_works(db: SessionLocal = Depends(get_db), current_user: schemas.Use
 
 
 @app.get("/user/{user_id}", response_model=schemas.User)
-def get_user(user_id: int, db: SessionLocal = Depends(get_db),
-             current_user: models.User = Depends(is_admin)):
+def get_user_by_id(user_id: int, db: SessionLocal = Depends(get_db),
+                   current_user: models.User = Depends(is_admin)):
     db_user = crud.get_user_by_id(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=404, detail="Utente non trovato.")
@@ -125,7 +137,7 @@ def get_user(user_id: int, db: SessionLocal = Depends(get_db),
 
 @app.post("/work/create", response_model=schemas.Work)
 def create_work(work: schemas.Work, current_user: models.User = Depends(get_current_user),
-                    db: SessionLocal = Depends(get_db)):
+                db: SessionLocal = Depends(get_db)):
     return crud.create_work(db=db, work=work, user_id=current_user.id)
 
 
@@ -147,6 +159,12 @@ def create_site(site: schemas.SiteCreate, db: SessionLocal = Depends(get_db),
 def create_client(client: schemas.ClientCreate, db: SessionLocal = Depends(get_db),
                   current_user: models.User = Depends(is_admin)):
     return crud.create_client(db=db, client=client)
+
+
+@app.put("/change_password")
+def change_password(user_id: int, password: str, db: SessionLocal = Depends(get_db),
+                    current_user: models.User = Depends(is_admin)):
+    return crud.change_password(db=db, user_id=user_id, password=password)
 
 
 @app.put("/work/update", response_model=schemas.Work)
