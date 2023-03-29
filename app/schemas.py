@@ -59,6 +59,7 @@ class Work(BaseModel):
     intervention_type: str
     intervention_location: str
     site_id: int
+    supervisor: Optional[str] = None
     description: Optional[str] = None
     notes: Optional[str] = None
     trip_kms: Optional[str] = None

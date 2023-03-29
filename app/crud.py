@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 from fastapi import HTTPException
 from passlib import pwd
@@ -10,32 +11,16 @@ import app.schemas as schemas
 from app.database import SessionLocal
 
 
-def get_works_by_user_id(db: SessionLocal, user_id: int, sort_by: str = "date_created", sort_order: str = "desc"):
-    valid_sort_columns = ["date_created", "last_name", "date"]
-    if sort_by not in valid_sort_columns:
-        sort_by = "date_created"
-    if sort_order != "asc":
-        sort_order = "desc"
-
-    sort_columns = {
-        "date_created": models.Work.date_created,
-        "last_name": models.User.last_name,
-        "date": models.Work.date
-    }
-
-    sort_column = sort_columns[sort_by]
-    if sort_order == "desc":
-        sort_column = desc(sort_column)
-
+def get_works_by_user_id(db: SessionLocal, user_id: int):
     result = db.query(models.Work, models.Site.description.label("site_description"),
                       models.Site.code.label("site_code"),
                       models.Client.name.label("client_name")).filter(models.Work.operator_id == user_id).join(
         models.Site, models.Work.site_id == models.Site.id).join(models.Client,
                                                                  models.Site.client_id == models.Client.id).order_by(
-        sort_column).all()
+        models.Work.date).all()
     if result:
         return result
-    return 'C\'è stato un errore.'
+    return []
 
 
 def get_work_table(db: SessionLocal):
@@ -45,27 +30,18 @@ def get_work_table(db: SessionLocal):
         models.Site, models.Work.site_id == models.Site.id).join(models.Client,
                                                                  models.Site.client_id == models.Client.id).join(
         models.User,
-        models.Work.operator_id == models.User.id).all()
-
+        models.Work.operator_id == models.User.id).order_by(desc(models.Work.date)).all()
     if result:
         return result
-    return 'C\'è stato un errore.'
+    return []
 
 
-def get_work_by_id(db: SessionLocal, work_id: int):
+def get_work_by_id(db: SessionLocal, work_id: int, user_id: int):
     return db.query(models.Work, models.Site.description.label("site_description"), models.Site.code.label("site_code"),
                     models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
         models.Site, models.Work.site_id == models.Site.id).join(models.Client,
                                                                  models.Site.client_id == models.Client.id).join(
         models.User, models.Work.operator_id == models.User.id).filter(models.Work.id == work_id).first()
-
-
-def get_all_work_in_site(db: SessionLocal, site_id: int):
-    return db.query(models.Work, models.Site.description.label("site_description"), models.Site.code.label("site_code"),
-                    models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
-        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Site.client_id == models.Client.id).join(
-        models.User, models.Work.operator_id == models.User.id).filter(models.Site.id == site_id).all()
 
 
 def get_user_work_in_site(db: SessionLocal, site_id: int, user_id: int):
@@ -77,6 +53,80 @@ def get_user_work_in_site(db: SessionLocal, site_id: int, user_id: int):
         models.Work.operator_id == user_id).all()
 
 
+def get_months_work_by_user_and_site(
+        db: SessionLocal, operator_id: int, site_id: int, month: Optional[str] = None):
+    query = (
+        db.query(models.Work.date)
+        .join(models.Site)
+    )
+    if operator_id != 0:
+        query = query.filter(models.Work.operator_id == operator_id)
+    if site_id != 0:
+        query = query.filter(models.Site.id == site_id)
+    if month:
+        month_dt = datetime.datetime.strptime(month, "%m/%Y")
+        start_date = month_dt.replace(day=1)
+        end_date = (month_dt + datetime.timedelta(days=31)).replace(day=1) - datetime.timedelta(days=1)
+        query = query.filter(models.Work.date >= start_date, models.Work.date <= end_date)
+    if operator_id == 0 and site_id != 0:
+        query = query.filter(models.Site.id == site_id)
+    elif operator_id != 0 and site_id == 0:
+        query = query.filter(models.Work.operator_id == operator_id)
+    elif operator_id == 0 and site_id == 0:
+        query = db.query(models.Work.date)
+    dates = [d[0].strftime("%m/%Y") for d in query.distinct().order_by(models.Work.date).all()]
+    if operator_id == 0 or site_id == 0:
+        return sorted(set(dates))
+    return sorted(set(dates)) if len(dates) > 0 else []
+
+
+def get_monthly_work(month: str, site_id: int, db: SessionLocal, operator_id: Optional[int] = None):
+    query = db.query(models.Work, models.Site.description.label("site_description"),
+                     models.Site.code.label("site_code"),
+                     models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
+        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
+                                                                 models.Site.client_id == models.Client.id).join(
+        models.User, models.Work.operator_id == models.User.id)
+    if site_id != 0:
+        query = query.filter(models.Work.site_id == site_id)
+    if operator_id != 0:
+        query = query.filter(models.Work.operator_id == operator_id)
+    if month != '0':
+        month_dt = datetime.datetime.strptime(month, "%m/%Y")
+        query = query.filter(models.Work.date >= month_dt,
+                             models.Work.date < (month_dt.replace(day=28) + datetime.timedelta(days=4)))
+    query = query.order_by(desc(models.Work.date))
+    return query.all()
+
+
+def get_interval_work(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
+                      site_id: Optional[int] = None,
+                      operator_id: Optional[int] = None):
+    query = db.query(models.Work, models.Site.description.label("site_description"),
+                     models.Site.code.label("site_code"),
+                     models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
+        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
+                                                                 models.Site.client_id == models.Client.id).join(
+        models.User, models.Work.operator_id == models.User.id)
+    if site_id != 0:
+        query = query.filter(models.Work.site_id == site_id)
+    if operator_id != 0:
+        query = query.filter(models.Work.operator_id == operator_id)
+    if start_date != '' and end_date != '':
+        start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+        query = query.filter(models.Work.date >= start_date_dt,
+                             models.Work.date <= end_date_dt)
+    else:
+        if start_date != '':
+            start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(models.Work.date >= start_date_dt)
+        if end_date != '':
+            end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+            query = query.filter(models.Work.date <= end_date_dt)
+    return query.all()
+
+
 def update_work(db: SessionLocal, work_id: int, work: schemas.Work, user_id: int):
     db_work = db.query(models.Work).filter(models.Work.id == work_id).first()
     if db_work:
@@ -85,6 +135,7 @@ def update_work(db: SessionLocal, work_id: int, work: schemas.Work, user_id: int
         db_work.intervention_type = work.intervention_type
         db_work.intervention_location = work.intervention_location
         db_work.site_id = work.site_id
+        db_work.supervisor = work.supervisor
         db_work.description = work.description
         db_work.notes = work.notes
         db_work.trip_kms = work.trip_kms
@@ -155,9 +206,7 @@ def delete_work(db: SessionLocal, work_id: int, user_id: int):
     user = db.query(models.User).get(user_id)
     if not work:
         raise HTTPException(status_code=404, detail="Intervento non trovato.")
-    if user.role != 'admin':
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
-    if work.operator_id != user_id and user.role != 'admin':
+    if work.operator_id != user_id:
         raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
     db.delete(work)
     db.commit()
@@ -171,7 +220,7 @@ def create_work(db: SessionLocal, work: schemas.Work, user_id: int):
         work.cost = 0.0
     db_work = models.Work(date=work.date, intervention_duration=work.intervention_duration,
                           intervention_type=work.intervention_type, intervention_location=work.intervention_location,
-                          site_id=work.site_id, description=work.description,
+                          site_id=work.site_id, description=work.description, supervisor=work.supervisor,
                           notes=work.notes, trip_kms=work.trip_kms, cost=work.cost, operator_id=user_id,
                           date_created=datetime.datetime.now())
     db.add(db_work)
@@ -192,10 +241,14 @@ def create_site(db: SessionLocal, site: schemas.SiteCreate):
     return db_site
 
 
-def get_sites(db: SessionLocal):
+def get_sites(db: SessionLocal, user_id: Optional[int] = None):
+    if user_id is None or user_id == 0:
+        return db.query(models.Site, models.Client).join(models.Client,
+                                                         models.Site.client_id == models.Client.id).order_by(
+            models.Site.id).all()
     return db.query(models.Site, models.Client).join(models.Client,
-                                                     models.Site.client_id == models.Client.id).order_by(
-        models.Site.id).all()
+                                                     models.Site.client_id == models.Client.id).join(
+        models.Work).filter(models.Work.operator_id == user_id).all()
 
 
 def create_client(db: SessionLocal, client: schemas.ClientCreate):

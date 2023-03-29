@@ -1,6 +1,5 @@
 from passlib.context import CryptContext
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time, DateTime
-from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -32,6 +31,7 @@ class Work(Base):
     intervention_duration = Column(Time)
     intervention_type = Column(String)
     intervention_location = Column(String)
+    supervisor = Column(String)
     site_id = Column(Integer, ForeignKey("sites.id"))
     description = Column(String)
     notes = Column(String)
