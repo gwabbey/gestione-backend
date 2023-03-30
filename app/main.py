@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, status, Query
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette.middleware.cors import CORSMiddleware
 
@@ -96,36 +96,42 @@ def get_work(current_user: models.User = Depends(is_admin),
 
 
 @app.get("/months")
-def get_available_months(db: SessionLocal = Depends(get_db), operator_id: Optional[int] = None,
-                         site_id: Optional[int] = None):
-    return crud.get_months_work_by_user_and_site(db, operator_id, site_id)
+def get_months(db: SessionLocal = Depends(get_db), operator_id: Optional[int] = None,
+               site_id: Optional[int] = None):
+    return crud.get_months(db, operator_id, site_id)
+
+
+@app.get("/me/months")
+def get_my_months(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
+                  site_id: Optional[int] = None):
+    return crud.get_months(db, operator_id=current_user.id, site_id=site_id)
 
 
 @app.get("/work/monthly")
-def get_work_for_month(month: Optional[str] = None, site_id: Optional[int] = None,
-                       operator_id: Optional[int] = None, db: SessionLocal = Depends(get_db)):
+def get_monthly_work(month: Optional[str] = None, site_id: Optional[int] = None,
+                     operator_id: Optional[int] = None, db: SessionLocal = Depends(get_db)):
     return crud.get_monthly_work(month=month, site_id=site_id, operator_id=operator_id, db=db)
 
 
 @app.get("/work/interval")
-def get_work_for_interval(start_date: Optional[str] = None, end_date: Optional[str] = None,
-                          site_id: Optional[int] = None,
-                          operator_id: Optional[int] = None, db: SessionLocal = Depends(get_db)):
+def get_interval_work(start_date: Optional[str] = None, end_date: Optional[str] = None,
+                      site_id: Optional[int] = None,
+                      operator_id: Optional[int] = None, db: SessionLocal = Depends(get_db)):
     return crud.get_interval_work(start_date=start_date, end_date=end_date, site_id=site_id, operator_id=operator_id,
                                   db=db)
 
 
 @app.get("/me/work/monthly")
-def get_user_work_for_month(month: Optional[str] = None, site_id: Optional[int] = None,
-                            current_user: models.User = Depends(get_current_user), db: SessionLocal = Depends(get_db)):
+def get_my_monthly_work(month: Optional[str] = None, site_id: Optional[int] = None,
+                        current_user: models.User = Depends(get_current_user), db: SessionLocal = Depends(get_db)):
     return crud.get_monthly_work(month=month, site_id=site_id, operator_id=current_user.id, db=db)
 
 
-@app.get("me/work/interval")
-def get_user_work_for_interval(start_date: Optional[str] = None, end_date: Optional[str] = None,
-                               site_id: Optional[int] = None,
-                               current_user: models.User = Depends(get_current_user),
-                               db: SessionLocal = Depends(get_db)):
+@app.get("/me/work/interval")
+def get_my_interval_work(start_date: Optional[str] = None, end_date: Optional[str] = None,
+                         site_id: Optional[int] = None,
+                         current_user: models.User = Depends(get_current_user),
+                         db: SessionLocal = Depends(get_db)):
     return crud.get_interval_work(start_date=start_date, end_date=end_date, site_id=site_id,
                                   operator_id=current_user.id,
                                   db=db)
@@ -148,10 +154,8 @@ async def get_profile(current_user: models.User = Depends(get_current_active_use
 
 
 @app.get("/me/work")
-def get_user_works(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
-                   sort_by: str = Query("date_created"),
-                   sort_order: str = Query("desc")):
-    return crud.get_works_by_user_id(db=db, user_id=current_user.id, sort_by=sort_by, sort_order=sort_order)
+def get_user_works(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
+    return crud.get_works_by_user_id(db=db, user_id=current_user.id)
 
 
 @app.get("/me/sites")

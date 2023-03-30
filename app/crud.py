@@ -53,12 +53,8 @@ def get_user_work_in_site(db: SessionLocal, site_id: int, user_id: int):
         models.Work.operator_id == user_id).all()
 
 
-def get_months_work_by_user_and_site(
-        db: SessionLocal, operator_id: int, site_id: int, month: Optional[str] = None):
-    query = (
-        db.query(models.Work.date)
-        .join(models.Site)
-    )
+def get_months(db: SessionLocal, operator_id: int, site_id: int, month: Optional[str] = None):
+    query = (db.query(models.Work.date).join(models.Site))
     if operator_id != 0:
         query = query.filter(models.Work.operator_id == operator_id)
     if site_id != 0:
