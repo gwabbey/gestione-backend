@@ -5,8 +5,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseSettings
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import StreamingResponse
 
 import app.crud as crud
 import app.models as models
@@ -19,14 +19,15 @@ ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS"))
 
 models.Base.metadata.create_all(bind=engine)
 
-# class Settings(BaseSettings):
-#     openapi_url: str = os.getenv("OPENAPI_URL")
+
+class Settings(BaseSettings):
+    openapi_url: str = os.getenv("OPENAPI_URL")
 
 
-# settings = Settings()
+settings = Settings()
 
 app = FastAPI()
-# openapi_url=settings.openapi_url // add this back later :D
+openapi_url = settings.openapi_url
 
 origins = [
     "*",
