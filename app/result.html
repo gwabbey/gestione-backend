@@ -1,0 +1,165 @@
+<html>
+<head>
+    <title>Intervento</title>
+</head>
+<body>
+<div class="header">
+    <div class="inner-header flex">
+        <h1 style="padding-left: 60px">move</h1>
+        <div style="flex: 1"></div>
+        <h1 style="padding-right: 60px">Intervento tecnico</h1>
+    </div>
+    <div>
+        <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+             viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+            <defs>
+                <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z"/>
+            </defs>
+            <g class="parallax">
+                <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7"/>
+                <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.5)"/>
+                <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)"/>
+                <use xlink:href="#gentle-wave" x="48" y="7" fill="#fff"/>
+            </g>
+        </svg>
+    </div>
+</div>
+<div class="content data">
+    <div class="flex">
+        <div>Data
+            <input type="text" class="box" value="{{work.Work.date.strftime('%d/%m/%Y')}}">
+        </div>
+        <div style="flex: 1"></div>
+        <div>
+            Codice
+            <input type="text"
+                   value="{{work.site_code}}" class="box">
+        </div>
+    </div>
+    <div style="padding-top: 20px"></div>
+    <div>
+        <div class="between">Operatore
+            <input type="text"
+                   value="{{work.last_name}} {{work.first_name}}" style="font-weight: 800" class="box">
+        </div>
+        <div class="between">Cliente
+            <input type="text"
+                   value="{{work.client_name}}" class="box">
+        </div>
+        <div class="between">Cantiere
+            <input type="text"
+                   value="{{work.site_description}}" class="box">
+        </div>
+        <div class="between">Tipo
+            <input type="text"
+                   value="{{work.Work.intervention_type}}" class="box">
+        </div>
+        <div class="between">Location
+            <input type="text"
+                   value="{{work.Work.intervention_location}}" class="box">
+        </div>
+        <div class="between">Supervisore
+            <input type="text"
+                   value="{{work.Work.supervisor}}" class="box">
+        </div>
+        <div style="padding-top: 20px"></div>
+        <div class="between">Descrizione<br>
+            <div class="description">{{work.Work.description}}</div>
+        </div>
+    </div>
+
+    <div class="flex" style="padding-top: 45px">
+        <div style="text-align: center">&nbsp;Firma operatore&nbsp;
+            <div style="padding-top: 60px">
+                <hr style="width: 100%">
+            </div>
+        </div>
+        <div style="flex: 1; height: 35px"></div>
+        <div style="text-align: center">&nbsp;&nbsp;Firma cliente&nbsp;&nbsp;
+            <div style="padding-top: 60px">
+                <hr style="width: 100%">
+            </div>
+        </div>
+    </div>
+
+    <p style="padding-top: 45px; text-align: center;">move automation | info@moveautomation.it</p>
+</div>
+</body>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Montserrat:wght@100;600&display=swap');
+
+
+    body {
+        margin: 0;
+    }
+
+    h1 {
+        font-family: 'Montserrat', sans-serif;
+        letter-spacing: 2px;
+        font-size: 26px;
+        font-weight: 300;
+    }
+
+    .box {
+        width: auto;
+        border: 0.2px solid black;
+    }
+
+    .data {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 200;
+        letter-spacing: 1px;
+        font-size: 20px;
+    }
+
+    .between {
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    .description {
+        width: 100%;
+        height: 10em;
+        border: 0.2px solid black;
+    }
+
+    p {
+        font-family: 'Montserrat', sans-serif;
+        letter-spacing: 1px;
+        font-size: 14px;
+        color: #333333;
+    }
+
+    .header {
+        position: relative;
+        text-align: center;
+        background: linear-gradient(60deg, rgba(84, 58, 183, 1) 0%, rgba(0, 172, 193, 1) 100%);
+        color: white;
+    }
+
+    .inner-header {
+        height: 15vh;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .flex {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .waves {
+        position: relative;
+        width: 100%;
+        height: 5vh;
+        margin-bottom: -7px;
+        min-height: 100px;
+        max-height: 150px;
+    }
+</style>
+</html>

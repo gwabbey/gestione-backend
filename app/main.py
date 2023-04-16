@@ -1,3 +1,4 @@
+import datetime
 import os
 from datetime import timedelta
 from typing import Optional
@@ -5,8 +6,11 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from jinja2 import Template
 from pydantic import BaseSettings
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import Response
+from weasyprint import HTML
 
 import app.crud as crud
 import app.models as models
@@ -26,7 +30,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI()  # (openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 openapi_url = settings.openapi_url
 
 origins = [
@@ -148,6 +152,26 @@ def get_work_by_id(work_id: int, db: SessionLocal = Depends(get_db),
     if work is None:
         raise HTTPException(status_code=404, detail="Intervento non trovato.")
     return work
+
+
+@app.get("/work/{work_id}/report")
+def get_work_report(work_id: int, db: SessionLocal = Depends(get_db),
+                    current_user: models.User = Depends(get_current_user)):
+    if not current_user.id:
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questo intervento.")
+    work = crud.get_work_by_id(db, work_id=work_id, user_id=1)
+    if work is None:
+        raise HTTPException(status_code=404, detail="Intervento non trovato.")
+
+    with open('app/result.html') as file:
+        template = Template(file.read())
+
+    date = datetime.datetime.now()
+    template.globals['now'] = date.strftime
+
+    rendered_html = template.render(work=work)
+    pdf = HTML(string=rendered_html).write_pdf()
+    return Response(content=pdf, media_type="application/pdf")
 
 
 @app.get("/me", response_model=schemas.User)
