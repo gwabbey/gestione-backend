@@ -62,13 +62,24 @@
             <input type="text"
                    value="{{work.Work.supervisor}}" class="box">
         </div>
+        <div class="flex">
+            <div>Kilometri viaggio
+                <input type="text" class="box" value="{{work.Work.trip_kms}}">
+            </div>
+            <div style="flex: 1"></div>
+            <div>
+                Costo viaggio
+                <input type="text"
+                       value="€ {{work.Work.cost}}" class="box">
+            </div>
+        </div>
         <div style="padding-top: 20px"></div>
         <div class="between">Descrizione<br>
             <div class="description">{{work.Work.description}}</div>
         </div>
     </div>
 
-    <div class="flex" style="padding-top: 45px">
+    <div class="flex" style="padding-top: 35px">
         <div style="text-align: center">&nbsp;Firma operatore&nbsp;
             <div style="padding-top: 60px">
                 <hr style="width: 100%">
@@ -82,7 +93,7 @@
         </div>
     </div>
 
-    <p style="padding-top: 45px; text-align: center;">move automation | info@moveautomation.it</p>
+    <p style="padding-top: 35px; text-align: center;">move automation | info@moveautomation.it</p>
 </div>
 </body>
 <style>
