@@ -73,8 +73,12 @@ def get_clients(db: SessionLocal = Depends(get_db)):
 
 
 @app.get("/sites")
-def get_sites(db: SessionLocal = Depends(get_db), user_id: Optional[int] = None):
-    return crud.get_sites(db, user_id)
+def get_sites(db: SessionLocal = Depends(get_db), client_id: Optional[int] = None, user_id: Optional[int] = None):
+    if client_id:
+        return crud.get_sites(db, client_id=client_id)
+    elif user_id:
+        return crud.get_user_work_in_site(db, user_id=user_id)
+    return crud.get_sites(db)
 
 
 @app.get("/roles", response_model=list[schemas.Role])
@@ -93,6 +97,11 @@ def get_intervention_types(db: SessionLocal = Depends(get_db)):
 def get_locations(db: SessionLocal = Depends(get_db)):
     locations = db.query(models.Location).order_by(models.Location.id).all()
     return locations
+
+
+@app.get("/machines")
+def get_machines(db: SessionLocal = Depends(get_db)):
+    return crud.get_machines(db)
 
 
 @app.get("/work")
@@ -186,7 +195,7 @@ def get_user_works(db: SessionLocal = Depends(get_db), current_user: schemas.Use
 
 @app.get("/me/sites")
 def get_user_sites(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
-    return crud.get_sites(db=db, user_id=current_user.id)
+    return crud.get_sites(db=db)
 
 
 @app.get("/user/{user_id}", response_model=schemas.User)
@@ -196,6 +205,12 @@ def get_user_by_id(user_id: int, db: SessionLocal = Depends(get_db),
     if db_user is None:
         raise HTTPException(status_code=404, detail="Utente non trovato.")
     return db_user
+
+
+@app.post("/machines/create", response_model=schemas.Machine)
+def create_machine(machine: schemas.MachineCreate, db: SessionLocal = Depends(get_db),
+                   current_user: models.User = Depends(is_admin)):
+    return crud.create_machine(db=db, machine=machine)
 
 
 @app.post("/work/create", response_model=schemas.Work)

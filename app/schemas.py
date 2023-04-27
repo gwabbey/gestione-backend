@@ -137,6 +137,34 @@ class Location(BaseModel):
         orm_mode = True
 
 
+class Machine(BaseModel):
+    id: int
+    client_id: int
+    name: str
+    cost_center: str
+    brand: str
+    model: str
+    production_year: str
+    description: str
+    date_created: datetime.datetime
+
+    class Config:
+        orm_mode = True
+
+
+class MachineCreate(BaseModel):
+    client_id: int
+    name: str
+    cost_center: str
+    brand: str
+    model: str
+    production_year: str
+    description: str
+
+    class Config:
+        orm_mode = True
+
+
 class Role(BaseModel):
     id: int
     name: str

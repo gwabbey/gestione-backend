@@ -11,6 +11,19 @@ import app.schemas as schemas
 from app.database import SessionLocal
 
 
+def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
+    db_machine = models.Machine(**machine.dict(), date_created=datetime.datetime.now())
+    db.add(db_machine)
+    db.commit()
+    db.refresh(db_machine)
+    return db_machine
+
+
+def get_machines(db: SessionLocal):
+    return db.query(models.Machine, models.Client).join(models.Client,
+                                                        models.Machine.client_id == models.Client.id).all()
+
+
 def get_works_by_user_id(db: SessionLocal, user_id: int):
     result = db.query(models.Work, models.Site.description.label("site_description"),
                       models.Site.code.label("site_code"),
@@ -44,17 +57,17 @@ def get_work_by_id(db: SessionLocal, work_id: int, user_id: int):
         models.User, models.Work.operator_id == models.User.id).filter(models.Work.id == work_id).first()
 
 
-def get_user_work_in_site(db: SessionLocal, site_id: int, user_id: int):
+def get_user_work_in_site(db: SessionLocal, user_id: int):
     return db.query(models.Work, models.Site.description.label("site_description"), models.Site.code.label("site_code"),
                     models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
         models.Site, models.Work.site_id == models.Site.id).join(models.Client,
                                                                  models.Site.client_id == models.Client.id).join(
-        models.User, models.Work.operator_id == models.User.id).filter(models.Site.id == site_id).filter(
+        models.User, models.Work.operator_id == models.User.id).filter(
         models.Work.operator_id == user_id).all()
 
 
 def get_months(db: SessionLocal, operator_id: int, site_id: int, month: Optional[str] = None):
-    query = (db.query(models.Work.date).join(models.Site))
+    query = db.query(models.Work.date).join(models.Site)
     if operator_id != 0:
         query = query.filter(models.Work.operator_id == operator_id)
     if site_id != 0:
@@ -237,16 +250,6 @@ def create_site(db: SessionLocal, site: schemas.SiteCreate):
     return db_site
 
 
-def get_sites(db: SessionLocal, user_id: Optional[int] = None):
-    if user_id is None or user_id == 0:
-        return db.query(models.Site, models.Client).join(models.Client,
-                                                         models.Site.client_id == models.Client.id).order_by(
-            models.Site.id).all()
-    return db.query(models.Site, models.Client).join(models.Client,
-                                                     models.Site.client_id == models.Client.id).join(
-        models.Work).filter(models.Work.operator_id == user_id).all()
-
-
 def create_client(db: SessionLocal, client: schemas.ClientCreate):
     if db.query(models.Client).filter(models.Client.name == client.name).first():
         raise HTTPException(status_code=400, detail="Cliente già registrato.")
@@ -257,3 +260,11 @@ def create_client(db: SessionLocal, client: schemas.ClientCreate):
     db.commit()
     db.refresh(db_client)
     return db_client
+
+
+def get_sites(db: SessionLocal, client_id: Optional[int] = None):
+    if client_id:
+        return db.query(models.Site, models.Client).join(models.Client,
+                                                         models.Site.client_id == models.Client.id).filter(
+            models.Site.client_id == client_id).all()
+    return db.query(models.Site, models.Client).join(models.Client, models.Site.client_id == models.Client.id).all()

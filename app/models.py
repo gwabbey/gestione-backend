@@ -76,3 +76,16 @@ class Role(Base):
     __tablename__ = "roles"
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name = Column(String)
+
+
+class Machine(Base):
+    __tablename__ = "machines"
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+    name = Column(String)
+    cost_center = Column(String)
+    brand = Column(String)
+    model = Column(String)
+    production_year = Column(String)
+    description = Column(String)
+    date_created = Column(DateTime)
