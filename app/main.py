@@ -136,7 +136,7 @@ def get_reports_in_month(month: Optional[str] = None, db: SessionLocal = Depends
     return crud.get_reports_in_month(month=month, db=db)
 
 
-@app.get("/reports/interval")  # TODO: fix
+@app.get("/reports/interval")
 def get_reports_in_interval(start_date: Optional[str] = None, end_date: Optional[str] = None,
                             db: SessionLocal = Depends(get_db)):
     return crud.get_reports_in_interval(start_date=start_date, end_date=end_date, db=db)
@@ -148,7 +148,7 @@ def get_my_reports_in_month(month: Optional[str] = None,
     return crud.get_reports_in_month(month=month, user_id=current_user.id, db=db)
 
 
-@app.get("/me/reports/interval")  # TODO: fix lmao
+@app.get("/me/reports/interval")
 def get_my_interval_report(start_date: Optional[str] = None, end_date: Optional[str] = None,
                            work_id: Optional[int] = None,
                            current_user: models.User = Depends(get_current_user),
