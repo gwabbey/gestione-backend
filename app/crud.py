@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import HTTPException
 from passlib import pwd
-from sqlalchemy import desc
+from sqlalchemy import literal_column, case, extract
 
 import app.auth as auth
 import app.models as models
@@ -11,7 +11,15 @@ import app.schemas as schemas
 from app.database import SessionLocal
 
 
-def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
+def get_plant_by_client(db: SessionLocal, client_id: int):
+    return db.query(models.Plant).filter(models.Plant.client_id == client_id).all()
+
+
+def get_machine_by_plant(db: SessionLocal, plant_id: int):
+    return db.query(models.Machine).filter(models.Machine.plant_id == plant_id).all()
+
+
+def create_machine(db: SessionLocal, machine: schemas.Machine):
     db_machine = models.Machine(**machine.dict(), date_created=datetime.datetime.now())
     db.add(db_machine)
     db.commit()
@@ -20,138 +28,184 @@ def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
 
 
 def get_machines(db: SessionLocal):
-    return db.query(models.Machine, models.Client).join(models.Client,
-                                                        models.Machine.client_id == models.Client.id).all()
+    return db.query(models.Machine, models.Plant, models.Client).join(models.Plant,
+                                                                      models.Machine.plant_id == models.Plant.id).join(
+        models.Client, models.Plant.client_id == models.Client.id).all()
 
 
-def get_works_by_user_id(db: SessionLocal, user_id: int):
-    result = db.query(models.Work, models.Site.description.label("site_description"),
-                      models.Site.code.label("site_code"),
-                      models.Client.name.label("client_name")).filter(models.Work.operator_id == user_id).join(
-        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Site.client_id == models.Client.id).order_by(
-        models.Work.date).all()
-    if result:
-        return result
-    return []
+def get_my_reports(db: SessionLocal, user_id: int):
+    return db.query(
+        models.Report,
+        models.Commission.id.label("commission_id"),
+        models.Commission.code.label("commission_code"),
+        models.Machine.id.label("machine_id"),
+        models.Machine.name.label("machine_name")
+    ).select_from(models.Report) \
+        .outerjoin(
+        models.Commission,
+        case(
+            [(models.Report.type == "commission", models.Report.work_id)],
+            else_=literal_column("null")
+        ).label("commission_id") == models.Commission.id
+    ) \
+        .outerjoin(
+        models.Machine,
+        case(
+            [(models.Report.type == "machine", models.Report.work_id)],
+            else_=literal_column("null")
+        ).label("machine_id") == models.Machine.id
+    ).filter(models.Report.operator_id == user_id).order_by(
+        models.Report.date).all()
 
 
-def get_work_table(db: SessionLocal):
-    result = db.query(models.Work, models.Site.description.label("site_description"),
-                      models.Site.code.label("site_code"),
-                      models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
-        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Site.client_id == models.Client.id).join(
-        models.User,
-        models.Work.operator_id == models.User.id).order_by(desc(models.Work.date)).all()
-    if result:
-        return result
-    return []
+def get_reports(db: SessionLocal):
+    return db.query(
+        models.Report,
+        models.Commission.id.label("commission_id"),
+        models.Commission.code.label("commission_code"),
+        models.Machine.id.label("machine_id"),
+        models.Machine.name.label("machine_name"),
+        models.User.id.label("operator_id"),
+        models.User.first_name,
+        models.User.last_name,
+        models.Client.id.label("client_id"),
+        models.Client.name.label("client_name")
+    ).select_from(models.Report) \
+        .outerjoin(
+        models.Commission,
+        case(
+            [(models.Report.type == "commission", models.Report.work_id)],
+            else_=literal_column("null")
+        ).label("commission_id") == models.Commission.id
+    ).outerjoin(
+        models.Machine,
+        case(
+            [(models.Report.type == "machine", models.Report.work_id)],
+            else_=literal_column("null")
+        ).label("machine_id") == models.Machine.id
+    ).join(models.User, models.Report.operator_id == models.User.id).join(models.Client,
+                                                                          models.Plant.client_id == models.Client.id).order_by(
+        models.Report.date).all()
 
 
-def get_work_by_id(db: SessionLocal, work_id: int, user_id: int):
-    return db.query(models.Work, models.Site.description.label("site_description"), models.Site.code.label("site_code"),
-                    models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
-        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Site.client_id == models.Client.id).join(
-        models.User, models.Work.operator_id == models.User.id).filter(models.Work.id == work_id).first()
+def get_report_by_id(db: SessionLocal, report_id: int):
+    return db.query(
+        models.Report,
+        models.Commission.id.label("commission_id"),
+        models.Commission.code.label("commission_code"),
+        models.Machine.id.label("machine_id"),
+        models.Machine.name.label("machine_name"),
+        models.User
+    ).select_from(models.Report) \
+        .outerjoin(
+        models.Commission,
+        case(
+            [(models.Report.type == "commission", models.Report.work_id)],
+            else_=literal_column("null")
+        ).label("commission_id") == models.Commission.id
+    ) \
+        .outerjoin(
+        models.Machine,
+        case(
+            [(models.Report.type == "machine", models.Report.work_id)],
+            else_=literal_column("null")
+        ).label("machine_id") == models.Machine.id
+    ).join(models.User, models.Report.operator_id == models.User.id).filter(models.Report.id == report_id).first()
 
 
-def get_user_work_in_site(db: SessionLocal, user_id: int):
-    return db.query(models.Work, models.Site.description.label("site_description"), models.Site.code.label("site_code"),
-                    models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
-        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Site.client_id == models.Client.id).join(
-        models.User, models.Work.operator_id == models.User.id).filter(
-        models.Work.operator_id == user_id).all()
+def get_user_commissions(db: SessionLocal, user_id: int):
+    return db.query(models.Commission, models.Client).join(models.Client,
+                                                           models.Commission.client_id == models.Client.id).all()
 
 
-def get_months(db: SessionLocal, operator_id: int, site_id: int, month: Optional[str] = None):
-    query = db.query(models.Work.date).join(models.Site)
-    if operator_id != 0:
-        query = query.filter(models.Work.operator_id == operator_id)
-    if site_id != 0:
-        query = query.filter(models.Site.id == site_id)
-    if month:
-        month_dt = datetime.datetime.strptime(month, "%m/%Y")
-        start_date = month_dt.replace(day=1)
-        end_date = (month_dt + datetime.timedelta(days=31)).replace(day=1) - datetime.timedelta(days=1)
-        query = query.filter(models.Work.date >= start_date, models.Work.date <= end_date)
-    if operator_id == 0 and site_id != 0:
-        query = query.filter(models.Site.id == site_id)
-    elif operator_id != 0 and site_id == 0:
-        query = query.filter(models.Work.operator_id == operator_id)
-    elif operator_id == 0 and site_id == 0:
-        query = db.query(models.Work.date)
-    dates = [d[0].strftime("%m/%Y") for d in query.distinct().order_by(models.Work.date).all()]
-    if operator_id == 0 or site_id == 0:
-        return sorted(set(dates))
-    return sorted(set(dates)) if len(dates) > 0 else []
+def get_months(db: SessionLocal, user_id: Optional[int] = None, work_id: Optional[int] = None):
+    if user_id and not work_id:
+        dates = db.query(models.Report.date.distinct()).filter(models.Report.operator_id == user_id).all()
+    elif work_id and user_id:
+        dates = db.query(models.Report.date.distinct()).filter(models.Report.work_id == work_id).all()
+    else:
+        dates = db.query(models.Report.date.distinct()).all()
+    return [datetime.datetime.strftime(date[0], "%m/%Y") for date in dates]
 
 
-def get_monthly_work(month: str, site_id: int, db: SessionLocal, operator_id: Optional[int] = None):
-    query = db.query(models.Work, models.Site.description.label("site_description"),
-                     models.Site.code.label("site_code"),
-                     models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
-        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Site.client_id == models.Client.id).join(
-        models.User, models.Work.operator_id == models.User.id)
-    if site_id != 0:
-        query = query.filter(models.Work.site_id == site_id)
-    if operator_id != 0:
-        query = query.filter(models.Work.operator_id == operator_id)
-    if month != '0':
-        month_dt = datetime.datetime.strptime(month, "%m/%Y")
-        query = query.filter(models.Work.date >= month_dt,
-                             models.Work.date < (month_dt.replace(day=28) + datetime.timedelta(days=4)))
-    query = query.order_by(desc(models.Work.date))
+def get_reports_in_month(db: SessionLocal, month: str, user_id: Optional[int] = None):
+    start_date = datetime.datetime.strptime(month, "%m/%Y").date()
+    end_date = start_date.replace(day=28) + datetime.timedelta(days=4)
+    end_date = end_date - datetime.timedelta(days=end_date.day)
+    query = db.query(
+        models.Report,
+        models.Commission.id.label("commission_id"),
+        models.Commission.code.label("commission_code"),
+        models.Machine.id.label("machine_id"),
+        models.Machine.name.label("machine_name")
+    ).select_from(models.Report) \
+        .outerjoin(
+        models.Commission,
+        case(
+            [(models.Report.type == "commission", models.Report.work_id)],
+            else_=literal_column("null")
+        ).label("commission_id") == models.Commission.id
+    ) \
+        .outerjoin(
+        models.Machine,
+        case(
+            [(models.Report.type == "machine", models.Report.work_id)],
+            else_=literal_column("null")
+        ).label("machine_id") == models.Machine.id
+    ) \
+        .filter(
+        extract('month', models.Report.date) == start_date.month,
+        extract('year', models.Report.date) == start_date.year
+    )
+    if user_id:
+        query = query.filter(models.Report.operator_id == user_id)
     return query.all()
 
 
-def get_interval_work(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
-                      site_id: Optional[int] = None,
-                      operator_id: Optional[int] = None):
-    query = db.query(models.Work, models.Site.description.label("site_description"),
-                     models.Site.code.label("site_code"),
+def get_reports_in_interval(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
+                            work_id: Optional[int] = None,
+                            operator_id: Optional[int] = None):
+    query = db.query(models.Report, models.Commission.description.label("commission_description"),
+                     models.Commission.code.label("commission_code"),
                      models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
-        models.Site, models.Work.site_id == models.Site.id).join(models.Client,
-                                                                 models.Site.client_id == models.Client.id).join(
-        models.User, models.Work.operator_id == models.User.id)
-    if site_id != 0:
-        query = query.filter(models.Work.site_id == site_id)
+        models.Commission, models.Report.work_id == models.Commission.id).join(models.Client,
+                                                                               models.Commission.client_id == models.Client.id).join(
+        models.User, models.Report.operator_id == models.User.id)
+    if work_id != 0:
+        query = query.filter(models.Report.work_id == work_id)
     if operator_id != 0:
-        query = query.filter(models.Work.operator_id == operator_id)
+        query = query.filter(models.Report.operator_id == operator_id)
     if start_date != '' and end_date != '':
         start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
         end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-        query = query.filter(models.Work.date >= start_date_dt,
-                             models.Work.date <= end_date_dt)
+        query = query.filter(models.Report.date >= start_date_dt,
+                             models.Report.date <= end_date_dt)
     else:
         if start_date != '':
             start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-            query = query.filter(models.Work.date >= start_date_dt)
+            query = query.filter(models.Report.date >= start_date_dt)
         if end_date != '':
             end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-            query = query.filter(models.Work.date <= end_date_dt)
+            query = query.filter(models.Report.date <= end_date_dt)
     return query.all()
 
 
-def update_work(db: SessionLocal, work_id: int, work: schemas.Work, user_id: int):
-    db_work = db.query(models.Work).filter(models.Work.id == work_id).first()
-    if db_work:
-        db_work.date = work.date
-        db_work.intervention_duration = work.intervention_duration
-        db_work.intervention_type = work.intervention_type
-        db_work.intervention_location = work.intervention_location
-        db_work.site_id = work.site_id
-        db_work.supervisor = work.supervisor
-        db_work.description = work.description
-        db_work.notes = work.notes
-        db_work.trip_kms = work.trip_kms
-        db_work.cost = work.cost
-        db_work.operator_id = user_id
+def update_report(db: SessionLocal, report_id: int, report: schemas.Report, user_id: int):
+    db_report = db.query(models.Report).filter(models.Report.id == report_id).first()
+    if db_report:
+        db_report.date = report.date
+        db_report.intervention_duration = report.intervention_duration
+        db_report.intervention_type = report.intervention_type
+        db_report.intervention_location = report.intervention_location
+        db_report.work_id = report.work_id
+        db_report.supervisor = report.supervisor
+        db_report.description = report.description
+        db_report.notes = report.notes
+        db_report.trip_kms = report.trip_kms
+        db_report.cost = report.cost
+        db_report.operator_id = user_id
         db.commit()
-        return db_work
+        return db_report
     return 'C\'è stato un errore.'
 
 
@@ -162,10 +216,10 @@ def get_user_by_id(db: SessionLocal, user_id: int):
 def create_user(db: SessionLocal, user: schemas.UserCreate):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Username già registrato.")
+        raise HTTPException(status_code=400, detail="Username già registrato")
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Email già registrata.")
+        raise HTTPException(status_code=400, detail="Email già registrata")
     tmp_password = user.password if user.password else pwd.genword()
     tmp_password_hashed = auth.get_password_hash(tmp_password)
     if user.role == 'Operatore':
@@ -183,76 +237,79 @@ def create_user(db: SessionLocal, user: schemas.UserCreate):
 
 def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
     if user_id == 1 or user_id == current_user_id:
-        raise HTTPException(status_code=403, detail="Non puoi eliminare questo utente.")
+        raise HTTPException(status_code=403, detail="Non puoi eliminare questo utente")
     user = db.query(models.User).get(user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="Utente non trovato.")
+        raise HTTPException(status_code=404, detail="Utente non trovato")
     db.delete(user)
     db.commit()
-    return 'Utente eliminato.'
+    return 'Utente eliminato'
 
 
 def delete_client(db: SessionLocal, client_id: int):
     client = db.query(models.Client).get(client_id)
     if not client:
-        raise HTTPException(status_code=404, detail="Cliente non trovato.")
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
     db.delete(client)
     db.commit()
-    return 'Cliente eliminato.'
+    return 'Cliente eliminato'
 
 
-def delete_site(db: SessionLocal, site_id: int):
-    site = db.query(models.Site).get(site_id)
-    if not site:
-        raise HTTPException(status_code=404, detail="Commessa non trovata.")
-    db.delete(site)
+def delete_commission(db: SessionLocal, work_id: int):
+    commission = db.query(models.Commission).get(work_id)
+    if not commission:
+        raise HTTPException(status_code=404, detail="Commessa non trovata")
+    db.delete(commission)
     db.commit()
-    return 'Commessa eliminata.'
+    return 'Commessa eliminata'
 
 
-def delete_work(db: SessionLocal, work_id: int, user_id: int):
-    work = db.query(models.Work).get(work_id)
+def delete_report(db: SessionLocal, report_id: int, user_id: int):
+    report = db.query(models.Report).get(report_id)
     user = db.query(models.User).get(user_id)
-    if not work:
-        raise HTTPException(status_code=404, detail="Intervento non trovato.")
-    if work.operator_id != user_id:
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento.")
-    db.delete(work)
+    if not report:
+        raise HTTPException(status_code=404, detail="Intervento non trovato")
+    if report.operator_id != user_id:
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento")
+    db.delete(report)
     db.commit()
-    return 'Intervento eliminato.'
+    return 'Intervento eliminato'
 
 
-def create_work(db: SessionLocal, work: schemas.Work, user_id: int):
-    if work.trip_kms == '':
-        work.trip_kms = 0.0
-    if work.cost == '':
-        work.cost = 0.0
-    db_work = models.Work(date=work.date, intervention_duration=work.intervention_duration,
-                          intervention_type=work.intervention_type, intervention_location=work.intervention_location,
-                          site_id=work.site_id, description=work.description, supervisor=work.supervisor,
-                          notes=work.notes, trip_kms=work.trip_kms, cost=work.cost, operator_id=user_id,
-                          date_created=datetime.datetime.now())
-    db.add(db_work)
+def create_report(db: SessionLocal, report: schemas.ReportCreate, user_id: int):
+    if report.trip_kms == '':
+        report.trip_kms = '0.0'
+    if report.cost == '':
+        report.cost = '0.0'
+    db_report = models.Report(date=report.date, intervention_duration=report.intervention_duration,
+                              intervention_type=report.intervention_type, type=report.type,
+                              intervention_location=report.intervention_location,
+                              work_id=report.work_id, description=report.description,
+                              supervisor=report.supervisor,
+                              notes=report.notes, trip_kms=report.trip_kms, cost=report.cost, operator_id=user_id,
+                              date_created=datetime.datetime.now())
+    db.add(db_report)
     db.commit()
-    db.refresh(db_work)
-    return db_work
+    db.refresh(db_report)
+    return db_report
 
 
-def create_site(db: SessionLocal, site: schemas.SiteCreate):
-    db_site = db.query(models.Site).filter(models.Site.code == site.code).first()
-    if db_site:
-        raise HTTPException(status_code=400, detail="Codice commessa già registrato.")
-    db_site = models.Site(date_created=datetime.datetime.now(),
-                          code=site.code, description=site.description, client_id=site.client_id)
-    db.add(db_site)
+def create_commission(db: SessionLocal, commission: schemas.CommissionCreate):
+    db_commission = db.query(models.Commission).filter(models.Commission.code == commission.code).first()
+    if db_commission:
+        raise HTTPException(status_code=400, detail="Codice commessa già registrato")
+    db_commission = models.Commission(date_created=datetime.datetime.now(),
+                                      code=commission.code, description=commission.description,
+                                      client_id=commission.client_id)
+    db.add(db_commission)
     db.commit()
-    db.refresh(db_site)
-    return db_site
+    db.refresh(db_commission)
+    return db_commission
 
 
-def create_client(db: SessionLocal, client: schemas.ClientCreate):
+def create_client(db: SessionLocal, client: schemas.Client):
     if db.query(models.Client).filter(models.Client.name == client.name).first():
-        raise HTTPException(status_code=400, detail="Cliente già registrato.")
+        raise HTTPException(status_code=400, detail="Cliente già registrato")
     db_client = models.Client(name=client.name, address=client.address, city=client.city, email=client.email,
                               phone_number=client.phone_number, contact=client.contact,
                               date_created=datetime.datetime.now())
@@ -262,9 +319,10 @@ def create_client(db: SessionLocal, client: schemas.ClientCreate):
     return db_client
 
 
-def get_sites(db: SessionLocal, client_id: Optional[int] = None):
+def get_commissions(db: SessionLocal, client_id: Optional[int] = None):
     if client_id:
-        return db.query(models.Site, models.Client).join(models.Client,
-                                                         models.Site.client_id == models.Client.id).filter(
-            models.Site.client_id == client_id).all()
-    return db.query(models.Site, models.Client).join(models.Client, models.Site.client_id == models.Client.id).all()
+        return db.query(models.Commission, models.Client).join(models.Client,
+                                                               models.Commission.client_id == models.Client.id).filter(
+            models.Commission.client_id == client_id).all()
+    return db.query(models.Commission, models.Client).join(models.Client,
+                                                           models.Commission.client_id == models.Client.id).all()

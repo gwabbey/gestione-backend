@@ -22,28 +22,13 @@ class User(Base):
         return pwd_context.verify(password, self.password)
 
 
-class Work(Base):
-    __tablename__ = "work"
-    id = Column(Integer, primary_key=True, index=True, unique=True)
-    operator_id = Column(Integer, ForeignKey("operators.id"))
-    date = Column(Date)
-    date_created = Column(DateTime)
-    intervention_duration = Column(Time)
-    intervention_type = Column(String)
-    intervention_location = Column(String)
-    supervisor = Column(String)
-    site_id = Column(Integer, ForeignKey("sites.id"))
-    description = Column(String)
-    notes = Column(String)
-    trip_kms = Column(String)
-    cost = Column(String)
-
-
 class Client(Base):
     __tablename__ = "clients"
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name = Column(String, unique=True, index=True)
+    province = Column(String)
     city = Column(String)
+    cap = Column(String)
     address = Column(String)
     email = Column(String)
     contact = Column(String)
@@ -51,12 +36,60 @@ class Client(Base):
     date_created = Column(DateTime)
 
 
-class Site(Base):
-    __tablename__ = "sites"
+class Plant(Base):  # stabilimento
+    __tablename__ = "plants"
     id = Column(Integer, primary_key=True, index=True, unique=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
+    name = Column(String)
+    city = Column(String)
+    cap = Column(String)
+    address = Column(String)
+    email = Column(String)
+    contact = Column(String)
+    phone_number = Column(String)
+    date_created = Column(DateTime)
+
+
+class Machine(Base):
+    __tablename__ = "machines"
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    plant_id = Column(Integer, ForeignKey("plants.id"))
+    robotic_island = Column(String)
+    code = Column(String)
+    name = Column(String)
+    brand = Column(String)
+    model = Column(String)
+    serial_number = Column(Integer)
+    production_year = Column(DateTime)
+    cost_center = Column(String)
+    description = Column(String)
+    date_created = Column(DateTime)
+
+
+class Commission(Base):
+    __tablename__ = "commissions"
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    client_id = Column(Integer, ForeignKey("clients.id"))
     code = Column(String)
     description = Column(String)
-    client_id = Column(Integer, ForeignKey("clients.id"))
+    date_created = Column(DateTime)
+
+
+class Report(Base):
+    __tablename__ = "reports"
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    operator_id = Column(Integer, ForeignKey("operators.id"))
+    work_id = Column(Integer)  # might be either a machine or a commission
+    type = Column(String)  # either machine or commission
+    date = Column(Date)
+    intervention_duration = Column(Time)
+    intervention_type = Column(String)
+    intervention_location = Column(String)
+    supervisor = Column(String)
+    description = Column(String)
+    notes = Column(String)
+    trip_kms = Column(String)
+    cost = Column(String)
     date_created = Column(DateTime)
 
 
@@ -76,16 +109,3 @@ class Role(Base):
     __tablename__ = "roles"
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name = Column(String)
-
-
-class Machine(Base):
-    __tablename__ = "machines"
-    id = Column(Integer, primary_key=True, index=True, unique=True)
-    client_id = Column(Integer, ForeignKey("clients.id"))
-    name = Column(String)
-    cost_center = Column(String)
-    brand = Column(String)
-    model = Column(String)
-    production_year = Column(String)
-    description = Column(String)
-    date_created = Column(DateTime)

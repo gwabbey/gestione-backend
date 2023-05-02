@@ -53,14 +53,17 @@ class User(UserBase):
         orm_mode = True
 
 
-class Work(BaseModel):
+class Report(BaseModel):
+    id: int
+    operator_id: int
+    type: str
+    work_id: int
     date: datetime.date
     intervention_duration: datetime.time
     intervention_type: str
     intervention_location: str
-    site_id: int
-    supervisor: Optional[str] = None
-    description: Optional[str] = None
+    supervisor: str
+    description: str
     notes: Optional[str] = None
     trip_kms: Optional[str] = None
     cost: Optional[str] = None
@@ -70,7 +73,25 @@ class Work(BaseModel):
         orm_mode = True
 
 
-class WorkDelete(BaseModel):
+class ReportCreate(BaseModel):
+    type: str
+    work_id: int
+    date: datetime.date
+    intervention_duration: datetime.time
+    intervention_type: str
+    intervention_location: str
+    supervisor: str
+    description: str
+    notes: Optional[str] = None
+    trip_kms: Optional[str] = None
+    cost: Optional[str] = None
+    date_created: Optional[datetime.datetime] = None
+
+    class Config:
+        orm_mode = True
+
+
+class ReportDelete(BaseModel):
     id: int
 
     class Config:
@@ -80,39 +101,62 @@ class WorkDelete(BaseModel):
 class Client(BaseModel):
     id: int
     name: str
+    province: str
     city: str
+    cap: str
     address: str
-    email: Optional[str] = None
-    contact: Optional[str] = None
-    phone_number: Optional[str] = None
-    date_created: Optional[datetime.datetime] = None
-
-
-class ClientCreate(BaseModel):
-    name: str
-    city: Optional[str] = None
-    address: Optional[str] = None
-    email: Optional[str] = None
-    contact: Optional[str] = None
-    phone_number: Optional[str] = None
-    date_created: Optional[datetime.datetime] = None
+    email: str
+    contact: str
+    phone_number: str
+    date_created: datetime.datetime
 
     class Config:
         orm_mode = True
 
 
-class Site(BaseModel):
+class Plant(BaseModel):
     id: int
-    date_created: Optional[datetime.datetime] = None
+    client_id: int
+    name: str
+    city: str
+    cap: str
+    address: str
+    email: str
+    contact: str
+    phone_number: str
+    date_created: datetime.datetime
+
+    class Config:
+        orm_mode = True
+
+
+class Machine(BaseModel):
+    id: int
+    plant_id: int
+    robotic_island: str
+    code: str
+    name: str
+    brand: str
+    model: str
+    serial_number: int
+    production_year: datetime.datetime
+    cost_center: str
+    description: str
+    date_created: datetime.datetime
+
+
+class Commission(BaseModel):
+    id: int
     code: Optional[str] = None
     description: Optional[str] = None
     client_id: Optional[int] = None
+    date_created: Optional[datetime.datetime] = None
 
     class Config:
         orm_mode = True
 
 
-class SiteCreate(BaseModel):
+class CommissionCreate(BaseModel):
     code: Optional[str] = None
     description: Optional[str] = None
     client_id: Optional[int] = None
@@ -132,34 +176,6 @@ class InterventionType(BaseModel):
 class Location(BaseModel):
     id: int
     name: str
-
-    class Config:
-        orm_mode = True
-
-
-class Machine(BaseModel):
-    id: int
-    client_id: int
-    name: str
-    cost_center: str
-    brand: str
-    model: str
-    production_year: str
-    description: str
-    date_created: datetime.datetime
-
-    class Config:
-        orm_mode = True
-
-
-class MachineCreate(BaseModel):
-    client_id: int
-    name: str
-    cost_center: str
-    brand: str
-    model: str
-    production_year: str
-    description: str
 
     class Config:
         orm_mode = True

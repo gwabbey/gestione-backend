@@ -10,16 +10,16 @@
         <h1 style="padding-right: 60px">Intervento tecnico</h1>
     </div>
     <div>
-        <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-             viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+        <svg class="waves" preserveAspectRatio="none" shape-rendering="auto"
+             viewBox="0 24 150 28" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
             <defs>
-                <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z"/>
+                <path d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" id="gentle-wave"/>
             </defs>
             <g class="parallax">
-                <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7"/>
-                <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.5)"/>
-                <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)"/>
-                <use xlink:href="#gentle-wave" x="48" y="7" fill="#fff"/>
+                <use fill="rgba(255,255,255,0.7" x="48" xlink:href="#gentle-wave" y="0"/>
+                <use fill="rgba(255,255,255,0.5)" x="48" xlink:href="#gentle-wave" y="3"/>
+                <use fill="rgba(255,255,255,0.3)" x="48" xlink:href="#gentle-wave" y="5"/>
+                <use fill="#fff" x="48" xlink:href="#gentle-wave" y="7"/>
             </g>
         </svg>
     </div>
@@ -27,55 +27,55 @@
 <div class="content data">
     <div class="flex">
         <div>Data
-            <input type="text" class="box" value="{{work.Work.date.strftime('%d/%m/%Y')}}">
+            <input class="box" type="text" value="{{report.Report.date.strftime('%d/%m/%Y')}}">
         </div>
         <div style="flex: 1"></div>
         <div>
             Codice
-            <input type="text"
-                   value="{{work.site_code}}" class="box">
+            <input class="box"
+                   type="text" value="{{report.site_code}}">
         </div>
     </div>
     <div style="padding-top: 20px"></div>
     <div>
         <div class="between">Operatore
-            <input type="text"
-                   value="{{work.last_name.upper()}} {{work.first_name.upper()}}" style="font-weight: 800" class="box">
+            <input class="box"
+                   style="font-weight: 800" type="text" value="{{report.User.last_name.upper()}} {{report.User.first_name.upper()}}">
         </div>
         <div class="between">Cliente
-            <input type="text"
-                   value="{{work.client_name}}" class="box">
+            <input class="box"
+                   type="text" value="{{report.client_name}}">
         </div>
         <div class="between">Cantiere
-            <input type="text"
-                   value="{{work.site_description}}" class="box">
+            <input class="box"
+                   type="text" value="{{report.site_description}}">
         </div>
         <div class="between">Tipo
-            <input type="text"
-                   value="{{work.Work.intervention_type}}" class="box">
+            <input class="box"
+                   type="text" value="{{report.Report.intervention_type}}">
         </div>
         <div class="between">Location
-            <input type="text"
-                   value="{{work.Work.intervention_location}}" class="box">
+            <input class="box"
+                   type="text" value="{{report.Report.intervention_location}}">
         </div>
         <div class="between">Supervisore
-            <input type="text"
-                   value="{{work.Work.supervisor}}" class="box">
+            <input class="box"
+                   type="text" value="{{report.Report.supervisor}}">
         </div>
         <div class="flex">
             <div>Kilometri viaggio
-                <input type="text" class="box" value="{{work.Work.trip_kms}}">
+                <input class="box" type="text" value="{{report.Report.trip_kms}}">
             </div>
             <div style="flex: 1"></div>
             <div>
                 Costo viaggio
-                <input type="text"
-                       value="€ {{work.Work.cost}}" class="box">
+                <input class="box"
+                       type="text" value="€ {{report.Report.cost}}">
             </div>
         </div>
         <div style="padding-top: 20px"></div>
         <div class="between">Descrizione<br>
-            <div class="description">{{work.Work.description}}</div>
+            <div class="description">{{report.Report.description}}</div>
         </div>
     </div>
 
