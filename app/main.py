@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI()  # (openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 openapi_url = settings.openapi_url
 
 origins = [
@@ -194,7 +194,7 @@ async def get_profile(current_user: models.User = Depends(get_current_active_use
 
 @app.get("/me/reports")
 def get_my_reports(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
-    return crud.get_my_reports(db=db, user_id=current_user.id)
+    return crud.get_reports(db=db, user_id=current_user.id)
 
 
 @app.get("/me/commissions")
@@ -250,8 +250,8 @@ def change_password(user_id: int, password: str, db: SessionLocal = Depends(get_
     return crud.change_password(db=db, user_id=user_id, password=password)
 
 
-@app.put("/report/update", response_model=schemas.Report)
-def update_report(report_id: int, user_id: int, report: schemas.Report, db: SessionLocal = Depends(get_db)):
+@app.put("/report/update", response_model=schemas.ReportCreate)
+def update_report(report_id: int, user_id: int, report: schemas.ReportCreate, db: SessionLocal = Depends(get_db)):
     return crud.update_report(db=db, report_id=report_id, report=report, user_id=user_id)
 
 

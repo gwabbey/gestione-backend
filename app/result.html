@@ -31,25 +31,33 @@
         </div>
         <div style="flex: 1"></div>
         <div>
-            Codice
-            <input class="box"
-                   type="text" value="{{report.site_code}}">
+            {% if report.commission_code is not none %}
+            {{report.commission_code}}
+            {% endif %}
         </div>
     </div>
     <div style="padding-top: 20px"></div>
     <div>
         <div class="between">Operatore
             <input class="box"
-                   style="font-weight: 800" type="text" value="{{report.User.last_name.upper()}} {{report.User.first_name.upper()}}">
+                   style="font-weight: 800" type="text"
+                   value="{{report.last_name.upper()}} {{report.first_name.upper()}}">
         </div>
         <div class="between">Cliente
             <input class="box"
                    type="text" value="{{report.client_name}}">
         </div>
-        <div class="between">Cantiere
+        {% if report.machine_name is not none %}
+        <div class="between">Macchina
             <input class="box"
-                   type="text" value="{{report.site_description}}">
+                   type="text" value="{{report.machine_name}}">
         </div>
+        {% else %}
+        <div class="between">Commessa
+            <input class="box"
+                   type="text" value="{{report.commission_description}}">
+        </div>
+        {% endif %}
         <div class="between">Tipo
             <input class="box"
                    type="text" value="{{report.Report.intervention_type}}">
@@ -93,7 +101,7 @@
         </div>
     </div>
 
-    <p style="padding-top: 35px; text-align: center;">move automation | info@moveautomation.it</p>
+    <p style="padding-top: 15px; text-align: center;">move automation | info@moveautomation.it</p>
 </div>
 </body>
 <style>

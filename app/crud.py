@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import HTTPException
 from passlib import pwd
-from sqlalchemy import literal_column, case, extract
+from sqlalchemy import literal_column, case, extract, or_
 
 import app.auth as auth
 import app.models as models
@@ -33,33 +33,8 @@ def get_machines(db: SessionLocal):
         models.Client, models.Plant.client_id == models.Client.id).all()
 
 
-def get_my_reports(db: SessionLocal, user_id: int):
-    return db.query(
-        models.Report,
-        models.Commission.id.label("commission_id"),
-        models.Commission.code.label("commission_code"),
-        models.Machine.id.label("machine_id"),
-        models.Machine.name.label("machine_name")
-    ).select_from(models.Report) \
-        .outerjoin(
-        models.Commission,
-        case(
-            [(models.Report.type == "commission", models.Report.work_id)],
-            else_=literal_column("null")
-        ).label("commission_id") == models.Commission.id
-    ) \
-        .outerjoin(
-        models.Machine,
-        case(
-            [(models.Report.type == "machine", models.Report.work_id)],
-            else_=literal_column("null")
-        ).label("machine_id") == models.Machine.id
-    ).filter(models.Report.operator_id == user_id).order_by(
-        models.Report.date).all()
-
-
-def get_reports(db: SessionLocal):
-    return db.query(
+def get_reports(db: SessionLocal, user_id: Optional[int] = None):
+    query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
         models.Commission.code.label("commission_code"),
@@ -70,22 +45,20 @@ def get_reports(db: SessionLocal):
         models.User.last_name,
         models.Client.id.label("client_id"),
         models.Client.name.label("client_name")
-    ).select_from(models.Report) \
-        .outerjoin(
-        models.Commission,
-        case(
-            [(models.Report.type == "commission", models.Report.work_id)],
-            else_=literal_column("null")
-        ).label("commission_id") == models.Commission.id
-    ).outerjoin(
-        models.Machine,
-        case(
-            [(models.Report.type == "machine", models.Report.work_id)],
-            else_=literal_column("null")
-        ).label("machine_id") == models.Machine.id
-    ).join(models.User, models.Report.operator_id == models.User.id).join(models.Client,
-                                                                          models.Plant.client_id == models.Client.id).order_by(
-        models.Report.date).all()
+    ).select_from(models.Report).outerjoin(models.Commission,
+                                           case([(models.Report.type == "commission", models.Report.work_id)],
+                                                else_=literal_column("null")).label(
+                                               "commission_id") == models.Commission.id).outerjoin(models.Machine, case(
+        [(models.Report.type == "machine", models.Report.work_id)], else_=literal_column("null")).label(
+        "machine_id") == models.Machine.id).join(models.User, models.Report.operator_id == models.User.id).outerjoin(
+        models.Plant, models.Report.type == "machine").join(models.Client,
+                                                            or_(models.Plant.client_id == models.Client.id,
+                                                                models.Commission.client_id == models.Client.id))
+
+    if user_id:
+        query = query.filter(models.Report.operator_id == user_id)
+
+    return query.order_by(models.Report.date).all()
 
 
 def get_report_by_id(db: SessionLocal, report_id: int):
@@ -93,24 +66,24 @@ def get_report_by_id(db: SessionLocal, report_id: int):
         models.Report,
         models.Commission.id.label("commission_id"),
         models.Commission.code.label("commission_code"),
+        models.Commission.description.label("commission_description"),
         models.Machine.id.label("machine_id"),
         models.Machine.name.label("machine_name"),
-        models.User
-    ).select_from(models.Report) \
-        .outerjoin(
-        models.Commission,
-        case(
-            [(models.Report.type == "commission", models.Report.work_id)],
-            else_=literal_column("null")
-        ).label("commission_id") == models.Commission.id
-    ) \
-        .outerjoin(
-        models.Machine,
-        case(
-            [(models.Report.type == "machine", models.Report.work_id)],
-            else_=literal_column("null")
-        ).label("machine_id") == models.Machine.id
-    ).join(models.User, models.Report.operator_id == models.User.id).filter(models.Report.id == report_id).first()
+        models.User.id.label("operator_id"),
+        models.User.first_name,
+        models.User.last_name,
+        models.Client.id.label("client_id"),
+        models.Client.name.label("client_name"),
+    ).select_from(models.Report).outerjoin(models.Commission,
+                                           case([(models.Report.type == "commission", models.Report.work_id)],
+                                                else_=literal_column("null")).label(
+                                               "commission_id") == models.Commission.id).outerjoin(models.Machine, case(
+        [(models.Report.type == "machine", models.Report.work_id)], else_=literal_column("null")).label(
+        "machine_id") == models.Machine.id).join(models.User, models.Report.operator_id == models.User.id).outerjoin(
+        models.Plant, models.Report.type == "machine").join(models.Client,
+                                                            or_(models.Plant.client_id == models.Client.id,
+                                                                models.Commission.client_id == models.Client.id)).filter(
+        models.Report.id == report_id).first()
 
 
 def get_user_commissions(db: SessionLocal, user_id: int):
@@ -119,13 +92,14 @@ def get_user_commissions(db: SessionLocal, user_id: int):
 
 
 def get_months(db: SessionLocal, user_id: Optional[int] = None, work_id: Optional[int] = None):
-    if user_id and not work_id:
-        dates = db.query(models.Report.date.distinct()).filter(models.Report.operator_id == user_id).all()
-    elif work_id and user_id:
-        dates = db.query(models.Report.date.distinct()).filter(models.Report.work_id == work_id).all()
-    else:
-        dates = db.query(models.Report.date.distinct()).all()
-    return [datetime.datetime.strftime(date[0], "%m/%Y") for date in dates]
+    query = db.query(models.Report.date)
+    if user_id:
+        query = query.filter(models.Report.operator_id == user_id)
+    if work_id:
+        query = query.filter(models.Report.work_id == work_id)
+    query = query.group_by(models.Report.date).order_by(models.Report.date)
+    dates = query.all()
+    return sorted(set([datetime.datetime.strftime(date[0], "%m/%Y") for date in dates]))
 
 
 def get_reports_in_month(db: SessionLocal, month: str, user_id: Optional[int] = None):
@@ -190,9 +164,10 @@ def get_reports_in_interval(db: SessionLocal, start_date: Optional[str] = None, 
     return query.all()
 
 
-def update_report(db: SessionLocal, report_id: int, report: schemas.Report, user_id: int):
+def update_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, user_id: int):
     db_report = db.query(models.Report).filter(models.Report.id == report_id).first()
     if db_report:
+        db_report.type = report.type
         db_report.date = report.date
         db_report.intervention_duration = report.intervention_duration
         db_report.intervention_type = report.intervention_type
