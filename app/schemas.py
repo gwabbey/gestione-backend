@@ -114,17 +114,47 @@ class Client(BaseModel):
         orm_mode = True
 
 
-class Plant(BaseModel):
-    id: int
-    client_id: int
+class ClientCreate(BaseModel):
     name: str
+    province: str
     city: str
     cap: str
     address: str
     email: str
     contact: str
     phone_number: str
+
+    class Config:
+        orm_mode = True
+
+
+class Plant(BaseModel):
+    id: int
+    client_id: int
+    name: str
+    city: str
+    province: str
+    cap: str
+    address: str
+    email: str
+    contact: str
+    phone_number: str
     date_created: datetime.datetime
+
+    class Config:
+        orm_mode = True
+
+
+class PlantCreate(BaseModel):
+    client_id: int
+    name: str
+    city: str
+    province: str
+    cap: str
+    address: str
+    email: str
+    contact: str
+    phone_number: str
 
     class Config:
         orm_mode = True
@@ -138,11 +168,24 @@ class Machine(BaseModel):
     name: str
     brand: str
     model: str
-    serial_number: int
-    production_year: datetime.datetime
+    serial_number: str
+    production_year: str
     cost_center: str
     description: str
     date_created: datetime.datetime
+
+
+class MachineCreate(BaseModel):
+    plant_id: int
+    robotic_island: str
+    code: str
+    name: str
+    brand: str
+    model: str
+    serial_number: str
+    production_year: str
+    cost_center: str
+    description: str
 
 
 class Commission(BaseModel):

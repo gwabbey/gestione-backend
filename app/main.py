@@ -99,6 +99,12 @@ def get_locations(db: SessionLocal = Depends(get_db)):
     return locations
 
 
+@app.get("/plants")
+def get_plants(db: SessionLocal = Depends(get_db)):
+    plants = db.query(models.Plant).order_by(models.Plant.id).all()
+    return plants
+
+
 @app.get("/machines")
 def get_machines(db: SessionLocal = Depends(get_db)):
     return crud.get_machines(db)
@@ -212,8 +218,14 @@ def get_user_by_id(user_id: int, db: SessionLocal = Depends(get_db),
     return db_user
 
 
-@app.post("/machines/create", response_model=schemas.Machine)
-def create_machine(machine: schemas.Machine, db: SessionLocal = Depends(get_db),
+@app.post("/plants/create", response_model=schemas.Plant)
+def create_plant(plant: schemas.PlantCreate, db: SessionLocal = Depends(get_db),
+                 current_user: models.User = Depends(is_admin)):
+    return crud.create_plant(db=db, plant=plant)
+
+
+@app.post("/machines/create")
+def create_machine(machine: schemas.MachineCreate, db: SessionLocal = Depends(get_db),
                    current_user: models.User = Depends(is_admin)):
     return crud.create_machine(db=db, machine=machine)
 
@@ -239,7 +251,7 @@ def create_commission(commission: schemas.CommissionCreate, db: SessionLocal = D
 
 
 @app.post("/clients/create")
-def create_client(client: schemas.Client, db: SessionLocal = Depends(get_db),
+def create_client(client: schemas.ClientCreate, db: SessionLocal = Depends(get_db),
                   current_user: models.User = Depends(is_admin)):
     return crud.create_client(db=db, client=client)
 
@@ -250,9 +262,9 @@ def change_password(user_id: int, password: str, db: SessionLocal = Depends(get_
     return crud.change_password(db=db, user_id=user_id, password=password)
 
 
-@app.put("/report/update", response_model=schemas.ReportCreate)
-def update_report(report_id: int, user_id: int, report: schemas.ReportCreate, db: SessionLocal = Depends(get_db)):
-    return crud.update_report(db=db, report_id=report_id, report=report, user_id=user_id)
+@app.put("/report/edit", response_model=schemas.ReportCreate)
+def edit_report(report_id: int, user_id: int, report: schemas.ReportCreate, db: SessionLocal = Depends(get_db)):
+    return crud.edit_report(db=db, report_id=report_id, report=report, user_id=user_id)
 
 
 @app.delete("/report/delete")

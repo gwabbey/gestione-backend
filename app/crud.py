@@ -19,8 +19,12 @@ def get_machine_by_plant(db: SessionLocal, plant_id: int):
     return db.query(models.Machine).filter(models.Machine.plant_id == plant_id).all()
 
 
-def create_machine(db: SessionLocal, machine: schemas.Machine):
-    db_machine = models.Machine(**machine.dict(), date_created=datetime.datetime.now())
+def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
+    db_machine = models.Machine(date_created=datetime.datetime.now(), name=machine.name, code=machine.code,
+                                brand=machine.brand, model=machine.model, serial_number=machine.serial_number,
+                                production_year=machine.production_year, cost_center=machine.cost_center,
+                                description=machine.description, plant_id=machine.plant_id,
+                                robotic_island=machine.robotic_island)
     db.add(db_machine)
     db.commit()
     db.refresh(db_machine)
@@ -164,7 +168,7 @@ def get_reports_in_interval(db: SessionLocal, start_date: Optional[str] = None, 
     return query.all()
 
 
-def update_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, user_id: int):
+def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, user_id: int):
     db_report = db.query(models.Report).filter(models.Report.id == report_id).first()
     if db_report:
         db_report.type = report.type
@@ -282,11 +286,12 @@ def create_commission(db: SessionLocal, commission: schemas.CommissionCreate):
     return db_commission
 
 
-def create_client(db: SessionLocal, client: schemas.Client):
+def create_client(db: SessionLocal, client: schemas.ClientCreate):
     if db.query(models.Client).filter(models.Client.name == client.name).first():
         raise HTTPException(status_code=400, detail="Cliente già registrato")
     db_client = models.Client(name=client.name, address=client.address, city=client.city, email=client.email,
-                              phone_number=client.phone_number, contact=client.contact,
+                              phone_number=client.phone_number, contact=client.contact, province=client.province,
+                              cap=client.cap,
                               date_created=datetime.datetime.now())
     db.add(db_client)
     db.commit()
@@ -295,9 +300,20 @@ def create_client(db: SessionLocal, client: schemas.Client):
 
 
 def get_commissions(db: SessionLocal, client_id: Optional[int] = None):
+    query = db.query(models.Commission, models.Client).join(models.Client,
+                                                            models.Commission.client_id == models.Client.id)
     if client_id:
-        return db.query(models.Commission, models.Client).join(models.Client,
-                                                               models.Commission.client_id == models.Client.id).filter(
+        query = query.filter(
             models.Commission.client_id == client_id).all()
-    return db.query(models.Commission, models.Client).join(models.Client,
-                                                           models.Commission.client_id == models.Client.id).all()
+    return query.order_by(models.Client.name).all()
+
+
+def create_plant(db: SessionLocal, plant: schemas.PlantCreate):
+    db_plant = models.Plant(date_created=datetime.datetime.now(), name=plant.name, address=plant.address,
+                            province=plant.province, cap=plant.cap,
+                            city=plant.city, email=plant.email, phone_number=plant.phone_number, contact=plant.contact,
+                            client_id=plant.client_id)
+    db.add(db_plant)
+    db.commit()
+    db.refresh(db_plant)
+    return db_plant
