@@ -193,6 +193,7 @@ class Commission(BaseModel):
     code: Optional[str] = None
     description: Optional[str] = None
     client_id: Optional[int] = None
+    status: Optional[str] = None
     date_created: Optional[datetime.datetime] = None
 
     class Config:
@@ -202,6 +203,7 @@ class Commission(BaseModel):
 class CommissionCreate(BaseModel):
     code: Optional[str] = None
     description: Optional[str] = None
+    status = 'on'
     client_id: Optional[int] = None
 
     class Config:

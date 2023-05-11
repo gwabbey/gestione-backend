@@ -73,6 +73,7 @@ class Commission(Base):
     client_id = Column(Integer, ForeignKey("clients.id"))
     code = Column(String)
     description = Column(String)
+    status = Column(String)
     date_created = Column(DateTime)
 
 

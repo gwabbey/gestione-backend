@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI()  # (openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 openapi_url = settings.openapi_url
 
 origins = [
@@ -52,7 +52,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     if not user or not user.verify_password(form_data.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenziali non valide",
+            detail="Invalid credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
@@ -262,9 +262,10 @@ def change_password(user_id: int, password: str, db: SessionLocal = Depends(get_
     return crud.change_password(db=db, user_id=user_id, password=password)
 
 
-@app.put("/report/edit", response_model=schemas.ReportCreate)
-def edit_report(report_id: int, user_id: int, report: schemas.ReportCreate, db: SessionLocal = Depends(get_db)):
-    return crud.edit_report(db=db, report_id=report_id, report=report, user_id=user_id)
+@app.put("/report/edit")
+def edit_report(report_id: int, report: schemas.ReportCreate, db: SessionLocal = Depends(get_db),
+                current_user: models.User = Depends(get_current_user)):
+    return crud.edit_report(db=db, report_id=report_id, report=report, user_id=current_user.id)
 
 
 @app.delete("/report/delete")

@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import HTTPException
 from passlib import pwd
-from sqlalchemy import literal_column, case, extract, or_
+from sqlalchemy import literal_column, case, extract, or_, and_
 
 import app.auth as auth
 import app.models as models
@@ -50,19 +50,21 @@ def get_reports(db: SessionLocal, user_id: Optional[int] = None):
         models.Client.id.label("client_id"),
         models.Client.name.label("client_name")
     ).select_from(models.Report).outerjoin(models.Commission,
-                                           case([(models.Report.type == "commission", models.Report.work_id)],
-                                                else_=literal_column("null")).label(
-                                               "commission_id") == models.Commission.id).outerjoin(models.Machine, case(
-        [(models.Report.type == "machine", models.Report.work_id)], else_=literal_column("null")).label(
-        "machine_id") == models.Machine.id).join(models.User, models.Report.operator_id == models.User.id).outerjoin(
-        models.Plant, models.Report.type == "machine").join(models.Client,
-                                                            or_(models.Plant.client_id == models.Client.id,
-                                                                models.Commission.client_id == models.Client.id))
+                                           and_(models.Report.type == "commission",
+                                                models.Report.work_id == models.Commission.id)).outerjoin(
+        models.Machine, and_(models.Report.type == "machine",
+                             models.Report.work_id == models.Machine.id)).join(models.User,
+                                                                               models.Report.operator_id == models.User.id).outerjoin(
+        models.Plant, and_(models.Report.type == "machine", models.Machine.plant_id == models.Plant.id)).join(
+        models.Client,
+        or_(models.Commission.client_id == models.Client.id,
+            and_(models.Plant.client_id == models.Client.id,
+                 models.Report.type == "machine")))
 
     if user_id:
         query = query.filter(models.Report.operator_id == user_id)
 
-    return query.order_by(models.Report.date).all()
+    return query.order_by(models.Report.date.desc()).all()
 
 
 def get_report_by_id(db: SessionLocal, report_id: int):
@@ -170,7 +172,10 @@ def get_reports_in_interval(db: SessionLocal, start_date: Optional[str] = None, 
 
 def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, user_id: int):
     db_report = db.query(models.Report).filter(models.Report.id == report_id).first()
-    if db_report:
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Non sei autorizzato a modificare questo report")
+    if db_report.operator_id == user_id:
         db_report.type = report.type
         db_report.date = report.date
         db_report.intervention_duration = report.intervention_duration
@@ -185,7 +190,7 @@ def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, 
         db_report.operator_id = user_id
         db.commit()
         return db_report
-    return 'C\'è stato un errore.'
+    return {"detail": "Errore"}, 400
 
 
 def get_user_by_id(db: SessionLocal, user_id: int):
@@ -222,7 +227,7 @@ def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
         raise HTTPException(status_code=404, detail="Utente non trovato")
     db.delete(user)
     db.commit()
-    return 'Utente eliminato'
+    return {"detail": "Utente eliminato"}
 
 
 def delete_client(db: SessionLocal, client_id: int):
@@ -231,28 +236,36 @@ def delete_client(db: SessionLocal, client_id: int):
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     db.delete(client)
     db.commit()
-    return 'Cliente eliminato'
+    return {"detail": "Cliente eliminato"}
 
 
-def delete_commission(db: SessionLocal, work_id: int):
-    commission = db.query(models.Commission).get(work_id)
+def delete_commission(db: SessionLocal, commission_id: int):
+    commission = db.query(models.Commission).get(commission_id)
     if not commission:
         raise HTTPException(status_code=404, detail="Commessa non trovata")
     db.delete(commission)
     db.commit()
-    return 'Commessa eliminata'
+    return {"detail": "Commessa eliminato"}
+
+
+def delete_machine(db: SessionLocal, machine_id: int):
+    machine = db.query(models.Machine).get(machine_id)
+    if not machine:
+        raise HTTPException(status_code=404, detail="Macchina non trovata")
+    db.delete(machine)
+    db.commit()
+    return {"detail": "Macchina eliminato"}
 
 
 def delete_report(db: SessionLocal, report_id: int, user_id: int):
     report = db.query(models.Report).get(report_id)
-    user = db.query(models.User).get(user_id)
     if not report:
         raise HTTPException(status_code=404, detail="Intervento non trovato")
     if report.operator_id != user_id:
         raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento")
     db.delete(report)
     db.commit()
-    return 'Intervento eliminato'
+    return {"detail": "Intervento eliminato"}
 
 
 def create_report(db: SessionLocal, report: schemas.ReportCreate, user_id: int):
@@ -279,7 +292,7 @@ def create_commission(db: SessionLocal, commission: schemas.CommissionCreate):
         raise HTTPException(status_code=400, detail="Codice commessa già registrato")
     db_commission = models.Commission(date_created=datetime.datetime.now(),
                                       code=commission.code, description=commission.description,
-                                      client_id=commission.client_id)
+                                      client_id=commission.client_id, status='on')
     db.add(db_commission)
     db.commit()
     db.refresh(db_commission)
@@ -304,7 +317,7 @@ def get_commissions(db: SessionLocal, client_id: Optional[int] = None):
                                                             models.Commission.client_id == models.Client.id)
     if client_id:
         query = query.filter(
-            models.Commission.client_id == client_id).all()
+            models.Commission.client_id == client_id)
     return query.order_by(models.Client.name).all()
 
 
