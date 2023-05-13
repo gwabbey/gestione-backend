@@ -84,7 +84,7 @@ class Report(Base):
     work_id = Column(Integer)  # might be either a machine or a commission
     type = Column(String)  # either machine or commission
     date = Column(Date)
-    intervention_duration = Column(Time)
+    intervention_duration = Column(String)
     intervention_type = Column(String)
     intervention_location = Column(String)
     supervisor = Column(String)

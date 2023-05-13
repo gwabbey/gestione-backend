@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+
 openapi_url = settings.openapi_url
 
 origins = [

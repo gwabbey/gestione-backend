@@ -173,8 +173,6 @@ def get_reports_in_interval(db: SessionLocal, start_date: Optional[str] = None, 
 def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, user_id: int):
     db_report = db.query(models.Report).filter(models.Report.id == report_id).first()
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user.role != "admin":
-        raise HTTPException(status_code=403, detail="Non sei autorizzato a modificare questo report")
     if db_report.operator_id == user_id:
         db_report.type = report.type
         db_report.date = report.date

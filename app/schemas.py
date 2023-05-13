@@ -59,7 +59,7 @@ class Report(BaseModel):
     type: str
     work_id: int
     date: datetime.date
-    intervention_duration: datetime.time
+    intervention_duration: str
     intervention_type: str
     intervention_location: str
     supervisor: str
@@ -77,7 +77,7 @@ class ReportCreate(BaseModel):
     type: str
     work_id: int
     date: datetime.date
-    intervention_duration: datetime.time
+    intervention_duration: str
     intervention_type: str
     intervention_location: str
     supervisor: str
