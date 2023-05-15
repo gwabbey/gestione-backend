@@ -43,6 +43,11 @@
                    style="font-weight: 800" type="text"
                    value="{{report.last_name.upper()}} {{report.first_name.upper()}}">
         </div>
+        <div class="between">Ore
+            <input class="box"
+                   style="font-weight: 800" type="text"
+                   value="{{report.Report.intervention_duration}}">
+        </div>
         <div class="between">Cliente
             <input class="box"
                    type="text" value="{{report.client_name}}">
@@ -81,7 +86,7 @@
                        type="text" value="€ {{report.Report.cost}}">
             </div>
         </div>
-        <div style="padding-top: 20px"></div>
+        <div style="padding-top: 10px"></div>
         <div class="between">Descrizione<br>
             <div class="description">{{report.Report.description}}</div>
         </div>
@@ -101,7 +106,7 @@
         </div>
     </div>
 
-    <p style="padding-top: 15px; text-align: center;">move automation | info@moveautomation.it</p>
+    <p style="padding-top: 35px; text-align: center;">move automation | info@moveautomation.it</p>
 </div>
 </body>
 <style>
@@ -140,7 +145,7 @@
 
     .description {
         width: 100%;
-        height: 10em;
+        height: 8em;
         border: 0.2px solid black;
     }
 
