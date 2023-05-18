@@ -163,29 +163,29 @@ class PlantCreate(BaseModel):
 class Machine(BaseModel):
     id: int
     plant_id: int
-    robotic_island: str
-    code: str
+    robotic_island: Optional[str] = None
+    code: Optional[str] = None
     name: str
-    brand: str
-    model: str
-    serial_number: str
-    production_year: str
-    cost_center: str
-    description: str
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
+    production_year: Optional[str] = None
+    cost_center: Optional[str] = None
+    description: Optional[str] = None
     date_created: datetime.datetime
 
 
 class MachineCreate(BaseModel):
     plant_id: int
-    robotic_island: str
-    code: str
+    robotic_island: Optional[str] = None
+    code: Optional[str] = None
     name: str
-    brand: str
-    model: str
-    serial_number: str
-    production_year: str
-    cost_center: str
-    description: str
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
+    production_year: Optional[str] = None
+    cost_center: Optional[str] = None
+    description: Optional[str] = None
 
 
 class Commission(BaseModel):
