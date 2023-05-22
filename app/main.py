@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI()  # openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 
 openapi_url = settings.openapi_url
 
@@ -288,6 +288,6 @@ def delete_client(client_id: int, db: SessionLocal = Depends(get_db),
 
 
 @app.delete("/commissions/delete")
-def delete_commissions(work_id: int, db: SessionLocal = Depends(get_db),
+def delete_commissions(commission_id: int, db: SessionLocal = Depends(get_db),
                        current_user: models.User = Depends(is_admin)):
-    return crud.delete_commission(db=db, work_id=work_id)
+    return crud.delete_commission(db=db, commission_id=commission_id)

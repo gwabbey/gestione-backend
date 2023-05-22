@@ -239,8 +239,12 @@ def delete_client(db: SessionLocal, client_id: int):
 
 def delete_commission(db: SessionLocal, commission_id: int):
     commission = db.query(models.Commission).get(commission_id)
+    exists = db.query(models.Report).filter(models.Report.work_id == commission_id).filter(
+        models.Report.type == 'commission').first()
     if not commission:
         raise HTTPException(status_code=404, detail="Commessa non trovata")
+    if exists:
+        raise HTTPException(status_code=400, detail="Non puoi eliminare questa commessa")
     db.delete(commission)
     db.commit()
     return {"detail": "Commessa eliminato"}
