@@ -54,7 +54,8 @@ def get_reports(db: SessionLocal, user_id: Optional[int] = None):
                                                 models.Report.work_id == models.Commission.id)).outerjoin(
         models.Machine, and_(models.Report.type == "machine",
                              models.Report.work_id == models.Machine.id)).join(models.User,
-                                                                               models.Report.operator_id == models.User.id).outerjoin(
+                                                                               models.Report.operator_id == models.
+                                                                               User.id).outerjoin(
         models.Plant, and_(models.Report.type == "machine", models.Machine.plant_id == models.Plant.id)).join(
         models.Client,
         or_(models.Commission.client_id == models.Client.id,
@@ -80,16 +81,20 @@ def get_report_by_id(db: SessionLocal, report_id: int):
         models.User.last_name,
         models.Client.id.label("client_id"),
         models.Client.name.label("client_name"),
-    ).select_from(models.Report).outerjoin(models.Commission,
-                                           case([(models.Report.type == "commission", models.Report.work_id)],
-                                                else_=literal_column("null")).label(
-                                               "commission_id") == models.Commission.id).outerjoin(models.Machine, case(
-        [(models.Report.type == "machine", models.Report.work_id)], else_=literal_column("null")).label(
-        "machine_id") == models.Machine.id).join(models.User, models.Report.operator_id == models.User.id).outerjoin(
-        models.Plant, models.Report.type == "machine").join(models.Client,
-                                                            or_(models.Plant.client_id == models.Client.id,
-                                                                models.Commission.client_id == models.Client.id)).filter(
-        models.Report.id == report_id).first()
+        models.Plant.id.label("plant_id"),
+        models.Plant.name.label("plant_name")
+    ).select_from(models.Report).outerjoin(
+        models.Commission,
+        and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
+    ).outerjoin(
+        models.Machine,
+        and_(models.Report.type == "machine", models.Report.work_id == models.Machine.id)
+    ).join(models.User, models.Report.operator_id == models.User.id).outerjoin(
+        models.Plant, models.Machine.plant_id == models.Plant.id
+    ).join(
+        models.Client,
+        or_(models.Plant.client_id == models.Client.id, models.Commission.client_id == models.Client.id)
+    ).filter(models.Report.id == report_id).first()
 
 
 def get_user_commissions(db: SessionLocal, user_id: int):
@@ -172,8 +177,7 @@ def get_reports_in_interval(db: SessionLocal, start_date: Optional[str] = None, 
 
 def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, user_id: int):
     db_report = db.query(models.Report).filter(models.Report.id == report_id).first()
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if db_report.operator_id == user_id:
+    if db_report:
         db_report.type = report.type
         db_report.date = report.date
         db_report.intervention_duration = report.intervention_duration
@@ -218,9 +222,9 @@ def create_user(db: SessionLocal, user: schemas.UserCreate):
 
 
 def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
-    if user_id == 1 or user_id == current_user_id:
-        raise HTTPException(status_code=403, detail="Non puoi eliminare questo utente")
     user = db.query(models.User).get(user_id)
+    if user_id == 1 or user_id == current_user_id or user.role == 'admin':
+        raise HTTPException(status_code=403, detail="Non puoi eliminare questo utente")
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     db.delete(user)
@@ -230,8 +234,11 @@ def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
 
 def delete_client(db: SessionLocal, client_id: int):
     client = db.query(models.Client).get(client_id)
+    exists = db.query(models.Commission).filter(models.Commission.client_id == client_id).first()
     if not client:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
+    if exists:
+        raise HTTPException(status_code=400, detail="Non puoi eliminare questo cliente")
     db.delete(client)
     db.commit()
     return {"detail": "Cliente eliminato"}
@@ -247,16 +254,32 @@ def delete_commission(db: SessionLocal, commission_id: int):
         raise HTTPException(status_code=400, detail="Non puoi eliminare questa commessa")
     db.delete(commission)
     db.commit()
-    return {"detail": "Commessa eliminato"}
+    return {"detail": "Commessa eliminata"}
 
 
 def delete_machine(db: SessionLocal, machine_id: int):
     machine = db.query(models.Machine).get(machine_id)
+    exists = db.query(models.Report).filter(models.Report.work_id == machine_id).filter(
+        models.Report.type == 'machine').first()
     if not machine:
         raise HTTPException(status_code=404, detail="Macchina non trovata")
+    if exists:
+        raise HTTPException(status_code=400, detail="Non puoi eliminare questa macchina")
     db.delete(machine)
     db.commit()
-    return {"detail": "Macchina eliminato"}
+    return {"detail": "Macchina eliminata"}
+
+
+def delete_plant(db: SessionLocal, plant_id: int):
+    plant = db.query(models.Plant).get(plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Stabilimento non trovato")
+    exists = db.query(models.Machine).filter(models.Machine.plant_id == plant_id).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Non puoi eliminare questo stabilimento")
+    db.delete(plant)
+    db.commit()
+    return {"detail": "Plant deleted"}
 
 
 def delete_report(db: SessionLocal, report_id: int, user_id: int):

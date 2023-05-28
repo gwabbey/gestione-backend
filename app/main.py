@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI()  # openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 
 openapi_url = settings.openapi_url
 
@@ -264,9 +264,8 @@ def change_password(user_id: int, password: str, db: SessionLocal = Depends(get_
 
 
 @app.put("/report/edit")
-def edit_report(report_id: int, report: schemas.ReportCreate, db: SessionLocal = Depends(get_db),
-                current_user: models.User = Depends(get_current_user)):
-    return crud.edit_report(db=db, report_id=report_id, report=report, user_id=current_user.id)
+def edit_report(report_id: int, report: schemas.ReportCreate, user_id: int, db: SessionLocal = Depends(get_db)):
+    return crud.edit_report(db=db, report_id=report_id, report=report, user_id=user_id)
 
 
 @app.delete("/report/delete")
@@ -288,6 +287,18 @@ def delete_client(client_id: int, db: SessionLocal = Depends(get_db),
 
 
 @app.delete("/commissions/delete")
-def delete_commissions(commission_id: int, db: SessionLocal = Depends(get_db),
-                       current_user: models.User = Depends(is_admin)):
+def delete_commission(commission_id: int, db: SessionLocal = Depends(get_db),
+                      current_user: models.User = Depends(is_admin)):
     return crud.delete_commission(db=db, commission_id=commission_id)
+
+
+@app.delete("/plants/delete")
+def delete_plants(plant_id: int, db: SessionLocal = Depends(get_db),
+                  current_user: models.User = Depends(is_admin)):
+    return crud.delete_plant(db=db, plant_id=plant_id)
+
+
+@app.delete("/machines/delete")
+def delete_machine(machine_id: int, db: SessionLocal = Depends(get_db),
+                   current_user: models.User = Depends(is_admin)):
+    return crud.delete_machine(db=db, machine_id=machine_id)
