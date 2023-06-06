@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import HTTPException
 from passlib import pwd
-from sqlalchemy import literal_column, case, extract, or_, and_
+from sqlalchemy import extract, or_, and_
 
 import app.auth as auth
 import app.models as models
@@ -97,69 +97,86 @@ def get_report_by_id(db: SessionLocal, report_id: int):
     ).filter(models.Report.id == report_id).first()
 
 
-def get_user_commissions(db: SessionLocal, user_id: int):
-    return db.query(models.Commission, models.Client).join(models.Client,
-                                                           models.Commission.client_id == models.Client.id).all()
-
-
-def get_months(db: SessionLocal, user_id: Optional[int] = None, work_id: Optional[int] = None):
+def get_months(db: SessionLocal, user_id: Optional[int] = None, client_id: Optional[int] = None):
     query = db.query(models.Report.date)
     if user_id:
         query = query.filter(models.Report.operator_id == user_id)
-    if work_id:
-        query = query.filter(models.Report.work_id == work_id)
+    if client_id:
+        query = query.filter(models.Client.id == client_id)
     query = query.group_by(models.Report.date).order_by(models.Report.date)
     dates = query.all()
     return sorted(set([datetime.datetime.strftime(date[0], "%m/%Y") for date in dates]))
 
 
-def get_reports_in_month(db: SessionLocal, month: str, user_id: Optional[int] = None):
-    start_date = datetime.datetime.strptime(month, "%m/%Y").date()
-    end_date = start_date.replace(day=28) + datetime.timedelta(days=4)
-    end_date = end_date - datetime.timedelta(days=end_date.day)
+def get_monthly_reports(db: SessionLocal, month: str, user_id: Optional[int] = None, client_id: Optional[int] = None):
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
         models.Commission.code.label("commission_code"),
+        models.Commission.description.label("commission_description"),
         models.Machine.id.label("machine_id"),
-        models.Machine.name.label("machine_name")
-    ).select_from(models.Report) \
-        .outerjoin(
+        models.Machine.name.label("machine_name"),
+        models.User.id.label("operator_id"),
+        models.User.first_name,
+        models.User.last_name,
+        models.Client.id.label("client_id"),
+        models.Client.name.label("client_name"),
+        models.Plant.id.label("plant_id"),
+        models.Plant.name.label("plant_name")
+    ).select_from(models.Report).outerjoin(
         models.Commission,
-        case(
-            [(models.Report.type == "commission", models.Report.work_id)],
-            else_=literal_column("null")
-        ).label("commission_id") == models.Commission.id
-    ) \
-        .outerjoin(
+        and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
+    ).outerjoin(
         models.Machine,
-        case(
-            [(models.Report.type == "machine", models.Report.work_id)],
-            else_=literal_column("null")
-        ).label("machine_id") == models.Machine.id
-    ) \
-        .filter(
-        extract('month', models.Report.date) == start_date.month,
-        extract('year', models.Report.date) == start_date.year
+        and_(models.Report.type == "machine", models.Report.work_id == models.Machine.id)
+    ).join(models.User, models.Report.operator_id == models.User.id).outerjoin(
+        models.Plant, models.Machine.plant_id == models.Plant.id
+    ).join(
+        models.Client,
+        or_(models.Plant.client_id == models.Client.id, models.Commission.client_id == models.Client.id)
     )
+    if month != '0':
+        start_date = datetime.datetime.strptime(month, "%m/%Y").date()
+        query = query.filter(
+            extract('month', models.Report.date) == start_date.month,
+            extract('year', models.Report.date) == start_date.year
+        )
     if user_id:
         query = query.filter(models.Report.operator_id == user_id)
+    if client_id:
+        query = query.filter(models.Client.id == client_id)
     return query.all()
 
 
-def get_reports_in_interval(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
-                            work_id: Optional[int] = None,
-                            operator_id: Optional[int] = None):
-    query = db.query(models.Report, models.Commission.description.label("commission_description"),
-                     models.Commission.code.label("commission_code"),
-                     models.Client.name.label("client_name"), models.User.first_name, models.User.last_name).join(
-        models.Commission, models.Report.work_id == models.Commission.id).join(models.Client,
-                                                                               models.Commission.client_id == models.Client.id).join(
-        models.User, models.Report.operator_id == models.User.id)
-    if work_id != 0:
-        query = query.filter(models.Report.work_id == work_id)
-    if operator_id != 0:
-        query = query.filter(models.Report.operator_id == operator_id)
+def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
+                         client_id: Optional[int] = None,
+                         user_id: Optional[int] = None):
+    query = db.query(
+        models.Report,
+        models.Commission.id.label("commission_id"),
+        models.Commission.code.label("commission_code"),
+        models.Commission.description.label("commission_description"),
+        models.Machine.id.label("machine_id"),
+        models.Machine.name.label("machine_name"),
+        models.User.id.label("operator_id"),
+        models.User.first_name,
+        models.User.last_name,
+        models.Client.id.label("client_id"),
+        models.Client.name.label("client_name"),
+        models.Plant.id.label("plant_id"),
+        models.Plant.name.label("plant_name")
+    ).select_from(models.Report).outerjoin(
+        models.Commission,
+        and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
+    ).outerjoin(
+        models.Machine,
+        and_(models.Report.type == "machine", models.Report.work_id == models.Machine.id)
+    ).join(models.User, models.Report.operator_id == models.User.id).outerjoin(
+        models.Plant, models.Machine.plant_id == models.Plant.id
+    ).join(
+        models.Client,
+        or_(models.Plant.client_id == models.Client.id, models.Commission.client_id == models.Client.id)
+    )
     if start_date != '' and end_date != '':
         start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
         end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
@@ -172,6 +189,10 @@ def get_reports_in_interval(db: SessionLocal, start_date: Optional[str] = None, 
         if end_date != '':
             end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
             query = query.filter(models.Report.date <= end_date_dt)
+    if user_id:
+        query = query.filter(models.Report.operator_id == user_id)
+    if client_id:
+        query = query.filter(models.Client.id == client_id)
     return query.all()
 
 

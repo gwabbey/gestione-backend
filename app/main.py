@@ -117,11 +117,6 @@ def get_reports(current_user: models.User = Depends(is_admin),
     return crud.get_reports(db)
 
 
-@app.get("/months")
-def get_months(db: SessionLocal = Depends(get_db)):
-    return crud.get_months(db)
-
-
 @app.get("/plant")
 def get_plant_by_client(db: SessionLocal = Depends(get_db), client_id: int = None):
     return crud.get_plant_by_client(db, client_id=client_id)
@@ -132,37 +127,65 @@ def get_machine_by_plant(db: SessionLocal = Depends(get_db), plant_id: int = Non
     return crud.get_machine_by_plant(db, plant_id=plant_id)
 
 
+@app.get("/months")
+def get_months(db: SessionLocal = Depends(get_db), user_id: Optional[int] = None, client_id: Optional[int] = None):
+    if user_id:
+        return crud.get_months(db, user_id=user_id)
+    elif client_id:
+        return crud.get_months(db, client_id=client_id)
+    return crud.get_months(db)
+
+
 @app.get("/me/months")
-def get_my_months(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
-                  work_id: Optional[int] = None):
-    return crud.get_months(db, user_id=current_user.id, work_id=work_id)
+def get_my_months(db: SessionLocal = Depends(get_db), current_user: models.User = Depends(get_current_user),
+                  client_id: Optional[int] = None):
+    if client_id:
+        return crud.get_months(db, user_id=current_user.id, client_id=client_id)
+    return crud.get_months(db, user_id=current_user.id)
 
 
 @app.get("/reports/monthly")
-def get_reports_in_month(month: Optional[str] = None, db: SessionLocal = Depends(get_db)):
-    return crud.get_reports_in_month(month=month, db=db)
-
-
-@app.get("/reports/interval")
-def get_reports_in_interval(start_date: Optional[str] = None, end_date: Optional[str] = None,
-                            db: SessionLocal = Depends(get_db)):
-    return crud.get_reports_in_interval(start_date=start_date, end_date=end_date, db=db)
+def get_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
+                        user_id: Optional[int] = None, client_id: Optional[int] = None):
+    if user_id and client_id:
+        return crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, db=db)
+    elif user_id:
+        return crud.get_monthly_reports(month=month, user_id=user_id, db=db)
+    elif client_id:
+        return crud.get_monthly_reports(month=month, client_id=client_id, db=db)
+    return crud.get_monthly_reports(month=month, db=db)
 
 
 @app.get("/me/reports/monthly")
-def get_my_reports_in_month(month: Optional[str] = None,
-                            current_user: models.User = Depends(get_current_user), db: SessionLocal = Depends(get_db)):
-    return crud.get_reports_in_month(month=month, user_id=current_user.id, db=db)
+def get_my_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
+                           current_user: models.User = Depends(get_current_user), client_id: Optional[int] = None):
+    if client_id:
+        return crud.get_monthly_reports(month=month, client_id=client_id, db=db, user_id=current_user.id)
+    return crud.get_monthly_reports(month=month, db=db, user_id=current_user.id)
+
+
+@app.get("/reports/interval")
+def get_interval_reports(start_date: Optional[str] = None, end_date: Optional[str] = None,
+                         db: SessionLocal = Depends(get_db), user_id: Optional[int] = None,
+                         client_id: Optional[int] = None):
+    if user_id and client_id:
+        return crud.get_interval_reports(start_date=start_date, end_date=end_date, user_id=user_id,
+                                         client_id=client_id, db=db)
+    elif user_id:
+        return crud.get_interval_reports(start_date=start_date, end_date=end_date, user_id=user_id, db=db)
+    elif client_id:
+        return crud.get_interval_reports(start_date=start_date, end_date=end_date, client_id=client_id, db=db)
+    return crud.get_interval_reports(start_date=start_date, end_date=end_date, db=db)
 
 
 @app.get("/me/reports/interval")
-def get_my_interval_report(start_date: Optional[str] = None, end_date: Optional[str] = None,
-                           work_id: Optional[int] = None,
-                           current_user: models.User = Depends(get_current_user),
-                           db: SessionLocal = Depends(get_db)):
-    return crud.get_interval_report(start_date=start_date, end_date=end_date, work_id=work_id,
-                                    operator_id=current_user.id,
-                                    db=db)
+def get_my_interval_reports(start_date: Optional[str] = None, end_date: Optional[str] = None,
+                            db: SessionLocal = Depends(get_db), current_user: models.User = Depends(get_current_user),
+                            client_id: Optional[int] = None):
+    if client_id:
+        return crud.get_interval_reports(start_date=start_date, end_date=end_date, client_id=client_id, db=db,
+                                         user_id=current_user.id)
+    return crud.get_interval_reports(start_date=start_date, end_date=end_date, db=db, user_id=current_user.id)
 
 
 @app.get("/report/{report_id}")
