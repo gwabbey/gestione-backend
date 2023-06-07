@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import HTTPException
 from passlib import pwd
-from sqlalchemy import extract, or_, and_
+from sqlalchemy import extract, or_, and_, func, Float
 
 import app.auth as auth
 import app.models as models
@@ -61,10 +61,8 @@ def get_reports(db: SessionLocal, user_id: Optional[int] = None):
         or_(models.Commission.client_id == models.Client.id,
             and_(models.Plant.client_id == models.Client.id,
                  models.Report.type == "machine")))
-
     if user_id:
         query = query.filter(models.Report.operator_id == user_id)
-
     return query.order_by(models.Report.date.desc()).all()
 
 
@@ -145,7 +143,7 @@ def get_monthly_reports(db: SessionLocal, month: str, user_id: Optional[int] = N
         query = query.filter(models.Report.operator_id == user_id)
     if client_id:
         query = query.filter(models.Client.id == client_id)
-    return query.all()
+    return query.order_by(models.Report.date).all()
 
 
 def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
@@ -193,7 +191,41 @@ def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end
         query = query.filter(models.Report.operator_id == user_id)
     if client_id:
         query = query.filter(models.Client.id == client_id)
-    return query.all()
+    return query.order_by(models.Report.date).all()
+
+
+def get_daily_hours_in_month(db: SessionLocal, month: str, user_id: int):
+    start_date = datetime.datetime.strptime(month, "%m/%Y").date()
+    end_date = (start_date.replace(day=1) + datetime.timedelta(days=32)).replace(day=1) - datetime.timedelta(days=1)
+    dates = []
+    current_date = start_date
+    while current_date <= end_date:
+        dates.append(current_date)
+        current_date += datetime.timedelta(days=1)
+    query = db.query(
+        func.date_trunc('day', models.Report.date).label('day'),
+        func.sum(func.cast(models.Report.intervention_duration, Float)).label('hours'),
+        func.count().label('count')
+    ).filter(
+        models.Report.date >= start_date,
+        models.Report.date < end_date + datetime.timedelta(days=1),
+        models.Report.operator_id == user_id
+    ).group_by(
+        func.date_trunc('day', models.Report.date)
+    ).order_by(
+        func.date_trunc('day', models.Report.date)
+    )
+    items = query.all()
+    result = []
+    for date in dates:
+        result_dict = {'date': date.strftime('%d/%m/%Y'), 'hours': 0, 'count': 0}
+        for item in items:
+            if item.day.date() == date:
+                result_dict['hours'] = item.hours
+                result_dict['count'] = item.count
+                break
+        result.append(result_dict)
+    return result
 
 
 def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, user_id: int):
@@ -213,6 +245,24 @@ def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, 
         db_report.operator_id = user_id
         db.commit()
         return db_report
+    return {"detail": "Errore"}, 400
+
+
+def edit_machine(db: SessionLocal, machine_id: int, machine: schemas.MachineCreate, user_id: int):
+    db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    if db_machine:
+        db_machine.plant_id = machine.plant_id
+        db_machine.robotic_island = machine.robotic_island
+        db_machine.code = machine.code
+        db_machine.name = machine.name
+        db_machine.brand = machine.brand
+        db_machine.model = machine.model
+        db_machine.serial_number = machine.serial_number
+        db_machine.production_year = machine.production_year
+        db_machine.cost_center = machine.cost_center
+        db_machine.description = machine.description
+        db.commit()
+        return db_machine
     return {"detail": "Errore"}, 400
 
 

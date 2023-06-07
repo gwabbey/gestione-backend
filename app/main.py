@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI(penapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 
 openapi_url = settings.openapi_url
 
@@ -77,8 +77,6 @@ def get_clients(db: SessionLocal = Depends(get_db)):
 def get_commissions(db: SessionLocal = Depends(get_db), client_id: Optional[int] = None, user_id: Optional[int] = None):
     if client_id:
         return crud.get_commissions(db, client_id=client_id)
-    elif user_id:
-        return crud.get_user_commissions(db, user_id=user_id)
     return crud.get_commissions(db)
 
 
@@ -188,6 +186,20 @@ def get_my_interval_reports(start_date: Optional[str] = None, end_date: Optional
     return crud.get_interval_reports(start_date=start_date, end_date=end_date, db=db, user_id=current_user.id)
 
 
+@app.get("/reports/daily")
+def get_daily_hours_in_month(month: str, user_id: Optional[int] = None, db: SessionLocal = Depends(get_db),
+                             current_user: models.User = Depends(get_current_user)):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Non sei autorizzato ad accedere a questa risorsa")
+    return crud.get_daily_hours_in_month(month=month, db=db, user_id=user_id)
+
+
+@app.get("/me/reports/daily")
+def get_my_daily_hours_in_month(month: str, db: SessionLocal = Depends(get_db),
+                                current_user: models.User = Depends(get_current_user)):
+    return crud.get_daily_hours_in_month(month=month, db=db, user_id=current_user.id)
+
+
 @app.get("/report/{report_id}")
 def get_report_by_id(report_id: int, db: SessionLocal = Depends(get_db),
                      current_user: models.User = Depends(get_current_user)):
@@ -289,6 +301,11 @@ def change_password(user_id: int, password: str, db: SessionLocal = Depends(get_
 @app.put("/report/edit")
 def edit_report(report_id: int, report: schemas.ReportCreate, user_id: int, db: SessionLocal = Depends(get_db)):
     return crud.edit_report(db=db, report_id=report_id, report=report, user_id=user_id)
+
+
+@app.put("/machine/edit")
+def edit_machine(machine_id: int, machine: schemas.MachineCreate, user_id: int, db: SessionLocal = Depends(get_db)):
+    return crud.edit_machine(db=db, machine_id=machine_id, machine=machine, user_id=user_id)
 
 
 @app.delete("/report/delete")
