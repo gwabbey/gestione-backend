@@ -36,3 +36,4 @@ wheel==0.40.0
 
 Jinja2~=3.1.2
 weasyprint~=58.1
+pypdf~=3.9.1
