@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI(penapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 
 openapi_url = settings.openapi_url
 
@@ -144,7 +144,11 @@ def get_my_months(db: SessionLocal = Depends(get_db), current_user: models.User 
 
 @app.get("/reports/monthly")
 def get_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
-                        user_id: Optional[int] = None, client_id: Optional[int] = None):
+                        user_id: Optional[int] = None, client_id: Optional[int] = None, plant_id: Optional[int] = None):
+    if user_id and client_id and plant_id:
+        return crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, plant_id=plant_id, db=db)
+    if client_id and plant_id:
+        return crud.get_monthly_reports(month=month, client_id=client_id, plant_id=plant_id, db=db)
     if user_id and client_id:
         return crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, db=db)
     elif user_id:

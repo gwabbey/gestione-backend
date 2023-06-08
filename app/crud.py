@@ -80,7 +80,8 @@ def get_report_by_id(db: SessionLocal, report_id: int):
         models.Client.id.label("client_id"),
         models.Client.name.label("client_name"),
         models.Plant.id.label("plant_id"),
-        models.Plant.name.label("plant_name")
+        models.Plant.name.label("plant_name"),
+        models.Plant.city.label("plant_city")
     ).select_from(models.Report).outerjoin(
         models.Commission,
         and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
@@ -106,7 +107,8 @@ def get_months(db: SessionLocal, user_id: Optional[int] = None, client_id: Optio
     return sorted(set([datetime.datetime.strftime(date[0], "%m/%Y") for date in dates]))
 
 
-def get_monthly_reports(db: SessionLocal, month: str, user_id: Optional[int] = None, client_id: Optional[int] = None):
+def get_monthly_reports(db: SessionLocal, month: str, user_id: Optional[int] = None, client_id: Optional[int] = None,
+                        plant_id: Optional[int] = None):
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -143,6 +145,8 @@ def get_monthly_reports(db: SessionLocal, month: str, user_id: Optional[int] = N
         query = query.filter(models.Report.operator_id == user_id)
     if client_id:
         query = query.filter(models.Client.id == client_id)
+    if plant_id:
+        query = query.filter(models.Plant.id == plant_id)
     return query.order_by(models.Report.date).all()
 
 
