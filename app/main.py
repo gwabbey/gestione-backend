@@ -1,6 +1,7 @@
 import datetime
 import os
 from datetime import timedelta
+from io import BytesIO
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from jinja2 import Template
 from pydantic import BaseSettings
+from pypdf import PdfWriter
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 from weasyprint import HTML
@@ -231,6 +233,35 @@ def get_pdf_report(report_id: int, db: SessionLocal = Depends(get_db),
     rendered_html = template.render(report=report)
     pdf = HTML(string=rendered_html).write_pdf()
     return Response(content=pdf, media_type="application/pdf")
+
+
+@app.get("/reports/monthly/pdf")
+def get_pdf_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
+                            user_id: Optional[int] = None, client_id: Optional[int] = None,
+                            plant_id: Optional[int] = None):
+    merger = PdfWriter()
+    if user_id and client_id and plant_id:
+        reports = crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, plant_id=plant_id, db=db)
+    elif client_id and plant_id:
+        reports = crud.get_monthly_reports(month=month, client_id=client_id, plant_id=plant_id, db=db)
+    elif user_id and client_id:
+        reports = crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, db=db)
+    elif user_id:
+        reports = crud.get_monthly_reports(month=month, user_id=user_id, db=db)
+    elif client_id:
+        reports = crud.get_monthly_reports(month=month, client_id=client_id, db=db)
+    else:
+        reports = crud.get_monthly_reports(month=month, db=db)
+    for report in reports:
+        with open('app/result.html') as file:
+            template = Template(file.read())
+        rendered_html = template.render(report=report)
+        pdf = HTML(string=rendered_html).write_pdf()
+        merger.append(BytesIO(pdf))
+    output = BytesIO()
+    merger.write(output)
+    output.seek(0)
+    return Response(content=output.getvalue(), media_type="application/pdf")
 
 
 @app.get("/me", response_model=schemas.User)
