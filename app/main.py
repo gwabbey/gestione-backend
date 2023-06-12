@@ -226,7 +226,7 @@ def get_pdf_report(report_id: int, db: SessionLocal = Depends(get_db),
     with open('app/result.html') as file:
         template = Template(file.read())
     rendered_html = template.render(report=report)
-    pdf = HTML(string=rendered_html).write_pdf()
+    pdf = HTML(string=rendered_html).write_pdf(presentational_hints=True)
     return Response(content=pdf, media_type="application/pdf")
 
 
@@ -251,7 +251,7 @@ def get_pdf_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
         with open('app/result.html') as file:
             template = Template(file.read())
         rendered_html = template.render(report=report)
-        pdf = HTML(string=rendered_html).write_pdf()
+        pdf = HTML(string=rendered_html).write_pdf(presentational_hints=True)
         merger.append(BytesIO(pdf))
     output = BytesIO()
     merger.write(output)
