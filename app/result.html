@@ -55,7 +55,7 @@
         {% if report.machine_name is not none %}
         <div class="between">Macchina
             <input class="box"
-                   type="text" value="{{report.machine_name}}">
+                   type="text" value="{{report.machine_code}} - {{report.machine_name}}">
         </div>
         {% else %}
         <div class="between">Commessa

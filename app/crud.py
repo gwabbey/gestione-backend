@@ -73,6 +73,7 @@ def get_report_by_id(db: SessionLocal, report_id: int):
         models.Commission.code.label("commission_code"),
         models.Commission.description.label("commission_description"),
         models.Machine.id.label("machine_id"),
+        models.Machine.code.label("machine_code"),
         models.Machine.name.label("machine_name"),
         models.User.id.label("operator_id"),
         models.User.first_name,
@@ -107,8 +108,9 @@ def get_months(db: SessionLocal, user_id: Optional[int] = None, client_id: Optio
     return sorted(set([datetime.datetime.strftime(date[0], "%m/%Y") for date in dates]))
 
 
-def get_monthly_reports(db: SessionLocal, month: str, user_id: Optional[int] = None, client_id: Optional[int] = None,
-                        plant_id: Optional[int] = None):
+def get_monthly_reports(db: SessionLocal, month: Optional[str] = '0', user_id: Optional[int] = 0,
+                        client_id: Optional[int] = 0,
+                        plant_id: Optional[int] = 0, work_id: Optional[int] = 0):
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -145,8 +147,41 @@ def get_monthly_reports(db: SessionLocal, month: str, user_id: Optional[int] = N
         query = query.filter(models.Report.operator_id == user_id)
     if client_id:
         query = query.filter(models.Client.id == client_id)
-    if plant_id:
+    if work_id == 0 and plant_id == 0:
+        query = query.filter(models.Report.type == "machine")
+    if plant_id != 0:
         query = query.filter(models.Plant.id == plant_id)
+    return query.order_by(models.Report.date).all()
+
+
+def get_monthly_commission_reports(db: SessionLocal, month: str, user_id: Optional[int] = None,
+                                   client_id: Optional[int] = None):
+    query = db.query(
+        models.Report,
+        models.Commission.id.label("commission_id"),
+        models.Commission.code.label("commission_code"),
+        models.Commission.description.label("commission_description"),
+        models.User.id.label("operator_id"),
+        models.User.first_name,
+        models.User.last_name,
+        models.Client.id.label("client_id"),
+        models.Client.name.label("client_name")
+    ).select_from(models.Report).join(
+        models.Commission,
+        and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
+    ).join(models.User, models.Report.operator_id == models.User.id).join(
+        models.Client, models.Commission.client_id == models.Client.id
+    )
+    if month != '0':
+        start_date = datetime.datetime.strptime(month, "%m/%Y").date()
+        query = query.filter(
+            extract('month', models.Report.date) == start_date.month,
+            extract('year', models.Report.date) == start_date.year
+        )
+    if user_id:
+        query = query.filter(models.Report.operator_id == user_id)
+    if client_id:
+        query = query.filter(models.Client.id == client_id)
     return query.order_by(models.Report.date).all()
 
 
@@ -430,3 +465,14 @@ def create_plant(db: SessionLocal, plant: schemas.PlantCreate):
     db.commit()
     db.refresh(db_plant)
     return db_plant
+
+
+def change_password(db: SessionLocal, old_password: str, new_password: str, user_id: int):
+    user = db.query(models.User).get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if not auth.verify_password(old_password, user.password):
+        raise HTTPException(status_code=400, detail="Password errata")
+    user.password = auth.get_password_hash(new_password)
+    db.commit()
+    return {"detail": "Password modificata"}

@@ -1,4 +1,3 @@
-import datetime
 import os
 from datetime import timedelta
 from io import BytesIO
@@ -55,7 +54,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     if not user or not user.verify_password(form_data.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
+            detail="Username o password errati.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
@@ -145,19 +144,17 @@ def get_my_months(db: SessionLocal = Depends(get_db), current_user: models.User 
 
 
 @app.get("/reports/monthly")
-def get_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
-                        user_id: Optional[int] = None, client_id: Optional[int] = None, plant_id: Optional[int] = None):
-    if user_id and client_id and plant_id:
-        return crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, plant_id=plant_id, db=db)
-    if client_id and plant_id:
-        return crud.get_monthly_reports(month=month, client_id=client_id, plant_id=plant_id, db=db)
-    if user_id and client_id:
-        return crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, db=db)
-    elif user_id:
-        return crud.get_monthly_reports(month=month, user_id=user_id, db=db)
-    elif client_id:
-        return crud.get_monthly_reports(month=month, client_id=client_id, db=db)
-    return crud.get_monthly_reports(month=month, db=db)
+def get_monthly_reports(month: Optional[str] = None, db: SessionLocal = Depends(get_db),
+                        user_id: Optional[int] = None, client_id: Optional[int] = None, plant_id: Optional[int] = None,
+                        work_id: Optional[int] = None):
+    return crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, plant_id=plant_id,
+                                    work_id=work_id, db=db)
+
+
+@app.get("/reports/monthly/commissions")
+def get_monthly_commission_reports(month: str, db: SessionLocal = Depends(get_db),
+                                   user_id: Optional[int] = None, client_id: Optional[int] = None):
+    return crud.get_monthly_commission_reports(month=month, user_id=user_id, client_id=client_id, db=db)
 
 
 @app.get("/me/reports/monthly")
@@ -228,8 +225,6 @@ def get_pdf_report(report_id: int, db: SessionLocal = Depends(get_db),
         raise HTTPException(status_code=404, detail="Intervento non trovato")
     with open('app/result.html') as file:
         template = Template(file.read())
-    date = datetime.datetime.now()
-    template.globals['now'] = date.strftime
     rendered_html = template.render(report=report)
     pdf = HTML(string=rendered_html).write_pdf()
     return Response(content=pdf, media_type="application/pdf")
@@ -328,9 +323,9 @@ def create_client(client: schemas.ClientCreate, db: SessionLocal = Depends(get_d
 
 
 @app.put("/change_password")
-def change_password(user_id: int, password: str, db: SessionLocal = Depends(get_db),
-                    current_user: models.User = Depends(is_admin)):
-    return crud.change_password(db=db, user_id=user_id, password=password)
+def change_password(new_password: str, old_password: str, current_user: schemas.User = Depends(get_current_user),
+                    db: SessionLocal = Depends(get_db)):
+    return crud.change_password(db=db, user_id=current_user.id, new_password=new_password, old_password=old_password)
 
 
 @app.put("/report/edit")
