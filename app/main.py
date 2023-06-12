@@ -153,8 +153,10 @@ def get_monthly_reports(month: Optional[str] = None, db: SessionLocal = Depends(
 
 @app.get("/reports/monthly/commissions")
 def get_monthly_commission_reports(month: str, db: SessionLocal = Depends(get_db),
-                                   user_id: Optional[int] = None, client_id: Optional[int] = None):
-    return crud.get_monthly_commission_reports(month=month, user_id=user_id, client_id=client_id, db=db)
+                                   user_id: Optional[int] = None, client_id: Optional[int] = None,
+                                   work_id: Optional[int] = None):
+    return crud.get_monthly_commission_reports(month=month, user_id=user_id, client_id=client_id, db=db,
+                                               work_id=work_id)
 
 
 @app.get("/me/reports/monthly")

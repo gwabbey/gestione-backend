@@ -155,7 +155,7 @@ def get_monthly_reports(db: SessionLocal, month: Optional[str] = '0', user_id: O
 
 
 def get_monthly_commission_reports(db: SessionLocal, month: str, user_id: Optional[int] = None,
-                                   client_id: Optional[int] = None):
+                                   client_id: Optional[int] = None, work_id: Optional[int] = None):
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -182,6 +182,8 @@ def get_monthly_commission_reports(db: SessionLocal, month: str, user_id: Option
         query = query.filter(models.Report.operator_id == user_id)
     if client_id:
         query = query.filter(models.Client.id == client_id)
+    if work_id:
+        query = query.filter(models.Report.work_id == work_id)
     return query.order_by(models.Report.date).all()
 
 
