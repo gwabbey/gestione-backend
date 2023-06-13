@@ -441,9 +441,10 @@ def delete_plant(db: SessionLocal, plant_id: int):
 
 def delete_report(db: SessionLocal, report_id: int, user_id: int):
     report = db.query(models.Report).get(report_id)
+    user = db.query(models.User).get(user_id)
     if not report:
         raise HTTPException(status_code=404, detail="Intervento non trovato")
-    if report.operator_id != user_id:
+    if report.operator_id != user_id and user.role != 'admin':
         raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento")
     db.delete(report)
     db.commit()
