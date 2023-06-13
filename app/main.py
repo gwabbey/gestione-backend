@@ -66,7 +66,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 @app.get("/users", response_model=list[schemas.User])
 def get_users(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(is_admin)):
-    return db.query(models.User).order_by(models.User.id).all()
+    return db.query(models.User).order_by(models.User.last_name).all()
 
 
 @app.get("/clients", response_model=list[schemas.Client])
