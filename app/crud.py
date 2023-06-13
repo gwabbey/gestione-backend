@@ -150,6 +150,8 @@ def get_monthly_reports(db: SessionLocal, month: Optional[str] = '0', user_id: O
         query = query.filter(models.Report.operator_id == user_id)
     if client_id:
         query = query.filter(models.Client.id == client_id)
+    if plant_id == 0:
+        query = query.filter(models.Report.type == "machine")
     if plant_id != 0:
         query = query.filter(models.Plant.id == plant_id)
     if work_id:
