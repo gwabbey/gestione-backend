@@ -170,15 +170,18 @@ def get_my_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
 @app.get("/reports/interval")
 def get_interval_reports(start_date: Optional[str] = None, end_date: Optional[str] = None,
                          db: SessionLocal = Depends(get_db), user_id: Optional[int] = None,
-                         client_id: Optional[int] = None):
-    if user_id and client_id:
-        return crud.get_interval_reports(start_date=start_date, end_date=end_date, user_id=user_id,
-                                         client_id=client_id, db=db)
-    elif user_id:
-        return crud.get_interval_reports(start_date=start_date, end_date=end_date, user_id=user_id, db=db)
-    elif client_id:
-        return crud.get_interval_reports(start_date=start_date, end_date=end_date, client_id=client_id, db=db)
-    return crud.get_interval_reports(start_date=start_date, end_date=end_date, db=db)
+                         client_id: Optional[int] = None, plant_id: Optional[int] = None,
+                         work_id: Optional[int] = None):
+    return crud.get_interval_reports(start_date=start_date, end_date=end_date, user_id=user_id, client_id=client_id,
+                                     plant_id=plant_id, work_id=work_id, db=db)
+
+
+@app.get("/reports/interval/commissions")
+def get_interval_commission_reports(start_date: Optional[str] = None, end_date: Optional[str] = None,
+                                    db: SessionLocal = Depends(get_db), user_id: Optional[int] = None,
+                                    client_id: Optional[int] = None, work_id: Optional[int] = None):
+    return crud.get_interval_commission_reports(start_date=start_date, end_date=end_date, user_id=user_id,
+                                                client_id=client_id, work_id=work_id, db=db)
 
 
 @app.get("/me/reports/interval")

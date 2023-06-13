@@ -188,8 +188,9 @@ def get_monthly_commission_reports(db: SessionLocal, month: str, user_id: Option
 
 
 def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
-                         client_id: Optional[int] = None,
-                         user_id: Optional[int] = None):
+                         user_id: Optional[int] = 0,
+                         client_id: Optional[int] = 0,
+                         plant_id: Optional[int] = 0, work_id: Optional[int] = 0):
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -232,6 +233,50 @@ def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end
         query = query.filter(models.Report.operator_id == user_id)
     if client_id:
         query = query.filter(models.Client.id == client_id)
+    if plant_id != 0:
+        query = query.filter(models.Plant.id == plant_id)
+    if work_id:
+        query = query.filter(models.Report.work_id == work_id)
+    return query.order_by(models.Report.date).all()
+
+
+def get_interval_commission_reports(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
+                                    user_id: Optional[int] = None,
+                                    client_id: Optional[int] = None, work_id: Optional[int] = None):
+    query = db.query(
+        models.Report,
+        models.Commission.id.label("commission_id"),
+        models.Commission.code.label("commission_code"),
+        models.Commission.description.label("commission_description"),
+        models.User.id.label("operator_id"),
+        models.User.first_name,
+        models.User.last_name,
+        models.Client.id.label("client_id"),
+        models.Client.name.label("client_name")
+    ).select_from(models.Report).join(
+        models.Commission,
+        and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
+    ).join(models.User, models.Report.operator_id == models.User.id).join(
+        models.Client, models.Commission.client_id == models.Client.id
+    )
+    if start_date != '' and end_date != '':
+        start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+        query = query.filter(models.Report.date >= start_date_dt,
+                             models.Report.date <= end_date_dt)
+    else:
+        if start_date != '':
+            start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(models.Report.date >= start_date_dt)
+        if end_date != '':
+            end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+            query = query.filter(models.Report.date <= end_date_dt)
+    if user_id:
+        query = query.filter(models.Report.operator_id == user_id)
+    if client_id:
+        query = query.filter(models.Client.id == client_id)
+    if work_id:
+        query = query.filter(models.Report.work_id == work_id)
     return query.order_by(models.Report.date).all()
 
 
