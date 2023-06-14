@@ -289,6 +289,15 @@ def get_user_by_id(user_id: int, db: SessionLocal = Depends(get_db),
     return db_user
 
 
+@app.get("/machine/{machine_id}")
+def get_machine_by_id(machine_id: int, db: SessionLocal = Depends(get_db),
+                      current_user: models.User = Depends(is_admin)):
+    db_machine = crud.get_machine_by_id(db, machine_id=machine_id)
+    if db_machine is None:
+        raise HTTPException(status_code=404, detail="Macchina non trovata")
+    return db_machine
+
+
 @app.post("/plants/create", response_model=schemas.Plant)
 def create_plant(plant: schemas.PlantCreate, db: SessionLocal = Depends(get_db),
                  current_user: models.User = Depends(is_admin)):
@@ -338,9 +347,28 @@ def edit_report(report_id: int, report: schemas.ReportCreate, user_id: int, db: 
     return crud.edit_report(db=db, report_id=report_id, report=report, user_id=user_id)
 
 
+@app.put("/client/edit")
+def edit_client(client_id: int, client: schemas.ClientCreate, db: SessionLocal = Depends(get_db),
+                current_user: models.User = Depends(is_admin)):
+    return crud.edit_client(db=db, client_id=client_id, client=client)
+
+
+@app.put("/commission/edit")
+def edit_commission(commission_id: int, commission: schemas.CommissionCreate, db: SessionLocal = Depends(get_db),
+                    current_user: models.User = Depends(is_admin)):
+    return crud.edit_commission(db=db, commission_id=commission_id, commission=commission)
+
+
+@app.put("/plant/edit")
+def edit_plant(plant_id: int, plant: schemas.PlantCreate, db: SessionLocal = Depends(get_db),
+               current_user: models.User = Depends(is_admin)):
+    return crud.edit_plant(db=db, plant_id=plant_id, plant=plant)
+
+
 @app.put("/machine/edit")
-def edit_machine(machine_id: int, machine: schemas.MachineCreate, user_id: int, db: SessionLocal = Depends(get_db)):
-    return crud.edit_machine(db=db, machine_id=machine_id, machine=machine, user_id=user_id)
+def edit_machine(machine_id: int, machine: schemas.MachineCreate, db: SessionLocal = Depends(get_db),
+                 current_user: models.User = Depends(is_admin)):
+    return crud.edit_machine(db=db, machine_id=machine_id, machine=machine)
 
 
 @app.delete("/report/delete")

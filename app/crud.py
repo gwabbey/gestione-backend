@@ -34,7 +34,7 @@ def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
 def get_machines(db: SessionLocal):
     return db.query(models.Machine, models.Plant, models.Client).join(models.Plant,
                                                                       models.Machine.plant_id == models.Plant.id).join(
-        models.Client, models.Plant.client_id == models.Client.id).all()
+        models.Client, models.Plant.client_id == models.Client.id).order_by(models.Machine.code).all()
 
 
 def get_reports(db: SessionLocal, user_id: Optional[int] = None):
@@ -340,7 +340,52 @@ def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, 
     return {"detail": "Errore"}, 400
 
 
-def edit_machine(db: SessionLocal, machine_id: int, machine: schemas.MachineCreate, user_id: int):
+def edit_client(db: SessionLocal, client_id: int, client: schemas.ClientCreate):
+    db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
+    if db_client:
+        db_client.name = client.name
+        db_client.city = client.city
+        db_client.address = client.address
+        db_client.email = client.email
+        db_client.contact = client.contact
+        db_client.phone_number = client.phone_number
+        db_client.province = client.province
+        db_client.cap = client.cap
+        db.commit()
+        return db_client
+    return {"detail": "Errore"}, 400
+
+
+def edit_commission(db: SessionLocal, commission_id: int, commission: schemas.CommissionCreate):
+    db_commission = db.query(models.Commission).filter(models.Commission.id == commission_id).first()
+    if db_commission:
+        db_commission.client_id = commission.client_id
+        db_commission.code = commission.code
+        db_commission.description = commission.description
+        db_commission.status = commission.status
+        db.commit()
+        return db_commission
+    return {"detail": "Errore"}, 400
+
+
+def edit_plant(db: SessionLocal, plant_id: int, plant: schemas.PlantCreate):
+    db_plant = db.query(models.Plant).filter(models.Plant.id == plant_id).first()
+    if db_plant:
+        db_plant.client_id = plant.client_id
+        db_plant.name = plant.name
+        db_plant.city = plant.city
+        db_plant.address = plant.address
+        db_plant.email = plant.email
+        db_plant.contact = plant.contact
+        db_plant.phone_number = plant.phone_number
+        db_plant.province = plant.province
+        db_plant.cap = plant.cap
+        db.commit()
+        return db_plant
+    return {"detail": "Errore"}, 400
+
+
+def edit_machine(db: SessionLocal, machine_id: int, machine: schemas.MachineCreate):
     db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
     if db_machine:
         db_machine.plant_id = machine.plant_id
@@ -360,6 +405,13 @@ def edit_machine(db: SessionLocal, machine_id: int, machine: schemas.MachineCrea
 
 def get_user_by_id(db: SessionLocal, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+def get_machine_by_id(db: SessionLocal, machine_id: int):
+    return db.query(models.Machine, models.Plant, models.Client).filter(models.Machine.id == machine_id).join(
+        models.Plant,
+        models.Machine.plant_id == models.Plant.id).join(
+        models.Client, models.Plant.client_id == models.Client.id).first()
 
 
 def create_user(db: SessionLocal, user: schemas.UserCreate):
