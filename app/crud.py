@@ -20,6 +20,10 @@ def get_machine_by_plant(db: SessionLocal, plant_id: int):
 
 
 def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
+    exists = db.query(models.Machine).filter(models.Machine.code == machine.code).filter(
+        models.Machine.plant_id == machine.plant_id).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Macchina già registrata")
     db_machine = models.Machine(date_created=datetime.datetime.now(), name=machine.name, code=machine.code,
                                 brand=machine.brand, model=machine.model, serial_number=machine.serial_number,
                                 production_year=machine.production_year, cost_center=machine.cost_center,
@@ -348,9 +352,6 @@ def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, 
 
 def edit_client(db: SessionLocal, client_id: int, client: schemas.ClientCreate):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
-    exists = db.query(models.Client).filter(models.Client.name == client.name).first()
-    if exists:
-        raise HTTPException(status_code=400, detail="Cliente già registrato")
     if db_client:
         db_client.name = client.name
         db_client.city = client.city
@@ -367,9 +368,6 @@ def edit_client(db: SessionLocal, client_id: int, client: schemas.ClientCreate):
 
 def edit_commission(db: SessionLocal, commission_id: int, commission: schemas.CommissionCreate):
     db_commission = db.query(models.Commission).filter(models.Commission.id == commission_id).first()
-    exists = db.query(models.Commission).filter(models.Commission.code == commission.code).first()
-    if exists:
-        raise HTTPException(status_code=400, detail="Commessa già registrata")
     if db_commission:
         db_commission.client_id = commission.client_id
         db_commission.code = commission.code
@@ -382,9 +380,6 @@ def edit_commission(db: SessionLocal, commission_id: int, commission: schemas.Co
 
 def edit_plant(db: SessionLocal, plant_id: int, plant: schemas.PlantCreate):
     db_plant = db.query(models.Plant).filter(models.Plant.id == plant_id).first()
-    exists = db.query(models.Plant).filter(models.Plant.name == plant.name).first()
-    if exists:
-        raise HTTPException(status_code=400, detail="Stabilimento già registrato")
     if db_plant:
         db_plant.client_id = plant.client_id
         db_plant.name = plant.name
@@ -402,10 +397,6 @@ def edit_plant(db: SessionLocal, plant_id: int, plant: schemas.PlantCreate):
 
 def edit_machine(db: SessionLocal, machine_id: int, machine: schemas.MachineCreate):
     db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
-    exists = db.query(models.Machine).filter(models.Machine.code == machine.code).filter(
-        models.Machine.plant_id == machine.plant_id).first()
-    if exists:
-        raise HTTPException(status_code=400, detail="Macchina già registrata")
     if db_machine:
         db_machine.plant_id = machine.plant_id
         db_machine.robotic_island = machine.robotic_island
@@ -598,6 +589,9 @@ def get_commissions(db: SessionLocal, client_id: Optional[int] = None):
 
 
 def create_plant(db: SessionLocal, plant: schemas.PlantCreate):
+    exists = db.query(models.Plant).filter(models.Plant.address == plant.address).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Esiste già uno stabilimento con questo indirizzo")
     db_plant = models.Plant(date_created=datetime.datetime.now(), name=plant.name, address=plant.address,
                             province=plant.province, cap=plant.cap,
                             city=plant.city, email=plant.email, phone_number=plant.phone_number, contact=plant.contact,
