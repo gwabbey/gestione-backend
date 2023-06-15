@@ -31,6 +31,12 @@ def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
     return db_machine
 
 
+def get_plants(db: SessionLocal):
+    return db.query(models.Plant, models.Client).join(models.Client,
+                                                      models.Plant.client_id == models.Client.id).order_by(
+        models.Plant.id).all()
+
+
 def get_machines(db: SessionLocal):
     return db.query(models.Machine, models.Plant, models.Client).join(models.Plant,
                                                                       models.Machine.plant_id == models.Plant.id).join(
@@ -342,6 +348,9 @@ def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, 
 
 def edit_client(db: SessionLocal, client_id: int, client: schemas.ClientCreate):
     db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
+    exists = db.query(models.Client).filter(models.Client.name == client.name).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Cliente già registrato")
     if db_client:
         db_client.name = client.name
         db_client.city = client.city
@@ -358,6 +367,9 @@ def edit_client(db: SessionLocal, client_id: int, client: schemas.ClientCreate):
 
 def edit_commission(db: SessionLocal, commission_id: int, commission: schemas.CommissionCreate):
     db_commission = db.query(models.Commission).filter(models.Commission.id == commission_id).first()
+    exists = db.query(models.Commission).filter(models.Commission.code == commission.code).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Commessa già registrata")
     if db_commission:
         db_commission.client_id = commission.client_id
         db_commission.code = commission.code
@@ -370,6 +382,9 @@ def edit_commission(db: SessionLocal, commission_id: int, commission: schemas.Co
 
 def edit_plant(db: SessionLocal, plant_id: int, plant: schemas.PlantCreate):
     db_plant = db.query(models.Plant).filter(models.Plant.id == plant_id).first()
+    exists = db.query(models.Plant).filter(models.Plant.name == plant.name).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Stabilimento già registrato")
     if db_plant:
         db_plant.client_id = plant.client_id
         db_plant.name = plant.name
@@ -387,6 +402,10 @@ def edit_plant(db: SessionLocal, plant_id: int, plant: schemas.PlantCreate):
 
 def edit_machine(db: SessionLocal, machine_id: int, machine: schemas.MachineCreate):
     db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    exists = db.query(models.Machine).filter(models.Machine.code == machine.code).filter(
+        models.Machine.plant_id == machine.plant_id).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Macchina già registrata")
     if db_machine:
         db_machine.plant_id = machine.plant_id
         db_machine.robotic_island = machine.robotic_island
@@ -405,6 +424,22 @@ def edit_machine(db: SessionLocal, machine_id: int, machine: schemas.MachineCrea
 
 def get_user_by_id(db: SessionLocal, user_id: int):
     return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+def get_client_by_id(db: SessionLocal, client_id: int):
+    return db.query(models.Client).filter(models.Client.id == client_id).first()
+
+
+def get_plant_by_id(db: SessionLocal, plant_id: int):
+    return db.query(models.Plant, models.Client).filter(models.Plant.id == plant_id).join(
+        models.Client,
+        models.Plant.client_id == models.Client.id).first()
+
+
+def get_commission_by_id(db: SessionLocal, commission_id: int):
+    return db.query(models.Commission, models.Client).filter(models.Commission.id == commission_id).join(
+        models.Client,
+        models.Commission.client_id == models.Client.id).first()
 
 
 def get_machine_by_id(db: SessionLocal, machine_id: int):
@@ -494,7 +529,7 @@ def delete_plant(db: SessionLocal, plant_id: int):
         raise HTTPException(status_code=400, detail="Non puoi eliminare questo stabilimento")
     db.delete(plant)
     db.commit()
-    return {"detail": "Plant deleted"}
+    return {"detail": "Stabilimento eliminato"}
 
 
 def delete_report(db: SessionLocal, report_id: int, user_id: int):

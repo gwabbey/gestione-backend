@@ -83,26 +83,22 @@ def get_commissions(db: SessionLocal = Depends(get_db), client_id: Optional[int]
 
 @app.get("/roles", response_model=list[schemas.Role])
 def get_roles(db: SessionLocal = Depends(get_db)):
-    roles = db.query(models.Role).order_by(models.Role.id).all()
-    return roles
+    return db.query(models.Role).order_by(models.Role.id).all()
 
 
 @app.get("/intervention_types", response_model=list[schemas.InterventionType])
 def get_intervention_types(db: SessionLocal = Depends(get_db)):
-    intervention_types = db.query(models.InterventionType).order_by(models.InterventionType.id).all()
-    return intervention_types
+    return db.query(models.InterventionType).order_by(models.InterventionType.id).all()
 
 
 @app.get("/locations", response_model=list[schemas.Location])
 def get_locations(db: SessionLocal = Depends(get_db)):
-    locations = db.query(models.Location).order_by(models.Location.id).all()
-    return locations
+    return db.query(models.Location).order_by(models.Location.id).all()
 
 
 @app.get("/plants")
 def get_plants(db: SessionLocal = Depends(get_db)):
-    plants = db.query(models.Plant).order_by(models.Plant.id).all()
-    return plants
+    return crud.get_plants(db)
 
 
 @app.get("/machines")
@@ -287,6 +283,33 @@ def get_user_by_id(user_id: int, db: SessionLocal = Depends(get_db),
     if db_user is None:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     return db_user
+
+
+@app.get("/client/{client_id}", response_model=schemas.Client)
+def get_client_by_id(client_id: int, db: SessionLocal = Depends(get_db),
+                     current_user: models.User = Depends(is_admin)):
+    db_client = crud.get_client_by_id(db, client_id=client_id)
+    if db_client is None:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    return db_client
+
+
+@app.get("/plant/{plant_id}")
+def get_plant_by_id(plant_id: int, db: SessionLocal = Depends(get_db),
+                    current_user: models.User = Depends(is_admin)):
+    db_plant = crud.get_plant_by_id(db, plant_id=plant_id)
+    if db_plant is None:
+        raise HTTPException(status_code=404, detail="Stabilimento non trovato")
+    return db_plant
+
+
+@app.get("/commission/{commission_id}")
+def get_commission_by_id(commission_id: int, db: SessionLocal = Depends(get_db),
+                         current_user: models.User = Depends(is_admin)):
+    db_commission = crud.get_commission_by_id(db, commission_id=commission_id)
+    if db_commission is None:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    return db_commission
 
 
 @app.get("/machine/{machine_id}")
