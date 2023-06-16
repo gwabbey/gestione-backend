@@ -59,7 +59,10 @@ def get_reports(db: SessionLocal, user_id: Optional[int] = None):
         models.User.first_name,
         models.User.last_name,
         models.Client.id.label("client_id"),
-        models.Client.name.label("client_name")
+        models.Client.name.label("client_name"),
+        models.Plant.id.label("plant_id"),
+        models.Plant.city.label("plant_city"),
+        models.Plant.address.label("plant_address")
     ).select_from(models.Report).outerjoin(models.Commission,
                                            and_(models.Report.type == "commission",
                                                 models.Report.work_id == models.Commission.id)).outerjoin(
@@ -94,7 +97,8 @@ def get_report_by_id(db: SessionLocal, report_id: int):
         models.Client.name.label("client_name"),
         models.Plant.id.label("plant_id"),
         models.Plant.name.label("plant_name"),
-        models.Plant.city.label("plant_city")
+        models.Plant.city.label("plant_city"),
+        models.Plant.address.label("plant_address")
     ).select_from(models.Report).outerjoin(
         models.Commission,
         and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
@@ -137,7 +141,9 @@ def get_monthly_reports(db: SessionLocal, month: Optional[str] = '0', user_id: O
         models.Client.id.label("client_id"),
         models.Client.name.label("client_name"),
         models.Plant.id.label("plant_id"),
-        models.Plant.name.label("plant_name")
+        models.Plant.name.label("plant_name"),
+        models.Plant.city.label("plant_city"),
+        models.Plant.address.label("plant_address")
     ).select_from(models.Report).outerjoin(
         models.Commission,
         and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)

@@ -1,3 +1,4 @@
+import csv
 import os
 from datetime import timedelta
 from io import BytesIO
@@ -10,7 +11,7 @@ from jinja2 import Template
 from pydantic import BaseSettings
 from pypdf import PdfWriter
 from starlette.middleware.cors import CORSMiddleware
-from starlette.responses import Response
+from starlette.responses import Response, FileResponse
 from weasyprint import HTML
 
 import app.crud as crud
@@ -155,14 +156,6 @@ def get_monthly_commission_reports(month: str, db: SessionLocal = Depends(get_db
                                                work_id=work_id)
 
 
-@app.get("/me/reports/monthly")
-def get_my_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
-                           current_user: models.User = Depends(get_current_user), client_id: Optional[int] = None):
-    if client_id:
-        return crud.get_monthly_reports(month=month, client_id=client_id, db=db, user_id=current_user.id)
-    return crud.get_monthly_reports(month=month, db=db, user_id=current_user.id)
-
-
 @app.get("/reports/interval")
 def get_interval_reports(start_date: Optional[str] = None, end_date: Optional[str] = None,
                          db: SessionLocal = Depends(get_db), user_id: Optional[int] = None,
@@ -180,28 +173,12 @@ def get_interval_commission_reports(start_date: Optional[str] = None, end_date: 
                                                 client_id=client_id, work_id=work_id, db=db)
 
 
-@app.get("/me/reports/interval")
-def get_my_interval_reports(start_date: Optional[str] = None, end_date: Optional[str] = None,
-                            db: SessionLocal = Depends(get_db), current_user: models.User = Depends(get_current_user),
-                            client_id: Optional[int] = None):
-    if client_id:
-        return crud.get_interval_reports(start_date=start_date, end_date=end_date, client_id=client_id, db=db,
-                                         user_id=current_user.id)
-    return crud.get_interval_reports(start_date=start_date, end_date=end_date, db=db, user_id=current_user.id)
-
-
 @app.get("/reports/daily")
 def get_daily_hours_in_month(month: str, user_id: Optional[int] = None, db: SessionLocal = Depends(get_db),
                              current_user: models.User = Depends(get_current_user)):
     if current_user.role != 'admin':
         raise HTTPException(status_code=403, detail="Non sei autorizzato ad accedere a questa risorsa")
     return crud.get_daily_hours_in_month(month=month, db=db, user_id=user_id)
-
-
-@app.get("/me/reports/daily")
-def get_my_daily_hours_in_month(month: str, db: SessionLocal = Depends(get_db),
-                                current_user: models.User = Depends(get_current_user)):
-    return crud.get_daily_hours_in_month(month=month, db=db, user_id=current_user.id)
 
 
 @app.get("/report/{report_id}")
@@ -231,23 +208,41 @@ def get_pdf_report(report_id: int, db: SessionLocal = Depends(get_db),
     return Response(content=pdf, media_type="application/pdf")
 
 
+@app.get("/reports/monthly/csv")
+def get_csv_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
+                            user_id: Optional[int] = None, client_id: Optional[int] = None,
+                            plant_id: Optional[int] = None, work_id: Optional[int] = None):
+    reports = crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, plant_id=plant_id,
+                                       work_id=work_id, db=db)
+    with open('app/test.csv', 'w', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=';')
+        csvwriter.writerow(
+            ['Operatore', 'Data', 'Cliente', 'Stabilimento', 'Durata', 'Tipo', 'Macchina', 'Centro di costo',
+             'Location', 'Descrizione'])
+        filename = 'interventi_' + month + '.csv'
+
+        for report in reports:
+            csvwriter.writerow([report.first_name + ' ' + report.last_name, report.Report.date.strftime("%d/%m/%Y"),
+                                report.client_name,
+                                report.plant_city + ' ' + report.plant_address,
+                                report.Report.intervention_duration.replace('.', ','),
+                                report.Report.intervention_type, report.machine_name,
+                                report.cost_center, report.Report.intervention_location,
+                                report.Report.description])
+        total_hours = [report.Report.intervention_duration for report in reports]
+        total_hours = sum([float(i.replace(',', '.')) for i in total_hours])
+        csvwriter.writerow('')
+        csvwriter.writerow(['Totale ore', '', '', '', str(total_hours).replace('.', ','), '', '', '', '', ''])
+    return FileResponse('app/test.csv', filename=filename)
+
+
 @app.get("/reports/monthly/pdf")
 def get_pdf_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
                             user_id: Optional[int] = None, client_id: Optional[int] = None,
-                            plant_id: Optional[int] = None):
+                            plant_id: Optional[int] = None, work_id: Optional[int] = None):
     merger = PdfWriter()
-    if user_id and client_id and plant_id:
-        reports = crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, plant_id=plant_id, db=db)
-    elif client_id and plant_id:
-        reports = crud.get_monthly_reports(month=month, client_id=client_id, plant_id=plant_id, db=db)
-    elif user_id and client_id:
-        reports = crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, db=db)
-    elif user_id:
-        reports = crud.get_monthly_reports(month=month, user_id=user_id, db=db)
-    elif client_id:
-        reports = crud.get_monthly_reports(month=month, client_id=client_id, db=db)
-    else:
-        reports = crud.get_monthly_reports(month=month, db=db)
+    reports = crud.get_monthly_reports(month=month, user_id=user_id, client_id=client_id, plant_id=plant_id,
+                                       work_id=work_id, db=db)
     for report in reports:
         with open('app/result.html') as file:
             template = Template(file.read())
@@ -258,6 +253,50 @@ def get_pdf_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
     merger.write(output)
     output.seek(0)
     return Response(content=output.getvalue(), media_type="application/pdf")
+
+
+@app.get("/reports/monthly/commissions/pdf")
+def get_pdf_monthly_commission_reports(month: str, db: SessionLocal = Depends(get_db),
+                                       user_id: Optional[int] = None, client_id: Optional[int] = None,
+                                       work_id: Optional[int] = None):
+    merger = PdfWriter()
+    reports = crud.get_monthly_commission_reports(month=month, user_id=user_id, client_id=client_id, work_id=work_id,
+                                                  db=db)
+    for report in reports:
+        with open('app/result.html') as file:
+            template = Template(file.read())
+        rendered_html = template.render(report=report)
+        pdf = HTML(string=rendered_html).write_pdf(presentational_hints=True)
+        merger.append(BytesIO(pdf))
+    output = BytesIO()
+    merger.write(output)
+    output.seek(0)
+    return Response(content=output.getvalue(), media_type="application/pdf")
+
+
+@app.get("/reports/monthly/commissions/csv")
+def get_csv_monthly_commission_reports(month: str, db: SessionLocal = Depends(get_db),
+                                       user_id: Optional[int] = None, client_id: Optional[int] = None,
+                                       work_id: Optional[int] = None):
+    reports = crud.get_monthly_commission_reports(month=month, user_id=user_id, client_id=client_id, work_id=work_id,
+                                                  db=db)
+    with open('app/test.csv', 'w', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=';')
+        csvwriter.writerow(
+            ['Operatore', 'Data', 'Cliente', 'Commessa', 'Durata', 'Tipo', 'Location', 'Descrizione'])
+        filename = 'interventi_' + month + '.csv'
+        for report in reports:
+            csvwriter.writerow([report.first_name + ' ' + report.last_name, report.Report.date.strftime("%d/%m/%Y"),
+                                report.client_name,
+                                report.commission_code + ' - ' + report.commission_description,
+                                report.Report.intervention_duration.replace('.', ','),
+                                report.Report.intervention_type, report.Report.intervention_location,
+                                report.Report.description])
+        total_hours = [report.Report.intervention_duration for report in reports]
+        total_hours = sum([float(i.replace(',', '.')) for i in total_hours])
+        csvwriter.writerow('')
+        csvwriter.writerow(['Totale ore', '', '', '', str(total_hours).replace('.', ','), '', '', ''])
+    return FileResponse('app/test.csv', filename=filename)
 
 
 @app.get("/me", response_model=schemas.User)

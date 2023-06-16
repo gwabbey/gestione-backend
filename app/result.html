@@ -40,6 +40,10 @@
                    type="text" value="{{report.client_name}}">
         </div>
         {% if report.machine_name is not none %}
+        <div class="between">Stabilimento
+            <input class="box"
+                   type="text" value="{{report.plant_city}}, {{report.plant_address}}">
+        </div>
         <div class="between">Macchina
             <input class="box"
                    type="text" value="{{report.machine_code}} - {{report.machine_name}}">
