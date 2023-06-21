@@ -41,13 +41,13 @@ def get_plants(db: SessionLocal):
         models.Plant.id).all()
 
 
-def get_machines(db: SessionLocal):
+def get_machines(db: SessionLocal, limit: Optional[int] = None):
     return db.query(models.Machine, models.Plant, models.Client).join(models.Plant,
                                                                       models.Machine.plant_id == models.Plant.id).join(
-        models.Client, models.Plant.client_id == models.Client.id).order_by(models.Machine.code).all()
+        models.Client, models.Plant.client_id == models.Client.id).order_by(models.Machine.code).limit(limit).all()
 
 
-def get_reports(db: SessionLocal, user_id: Optional[int] = None):
+def get_reports(db: SessionLocal, user_id: Optional[int] = None, limit: Optional[int] = None):
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -77,7 +77,7 @@ def get_reports(db: SessionLocal, user_id: Optional[int] = None):
                  models.Report.type == "machine")))
     if user_id:
         query = query.filter(models.Report.operator_id == user_id)
-    return query.order_by(models.Report.date.desc()).all()
+    return query.order_by(models.Report.date.desc()).limit(limit).all()
 
 
 def get_report_by_id(db: SessionLocal, report_id: int):

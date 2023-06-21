@@ -103,14 +103,14 @@ def get_plants(db: SessionLocal = Depends(get_db)):
 
 
 @app.get("/machines")
-def get_machines(db: SessionLocal = Depends(get_db)):
-    return crud.get_machines(db)
+def get_machines(db: SessionLocal = Depends(get_db), limit: Optional[int] = None):
+    return crud.get_machines(db, limit=limit)
 
 
 @app.get("/reports")
 def get_reports(current_user: models.User = Depends(is_admin),
-                db: SessionLocal = Depends(get_db)):
-    return crud.get_reports(db)
+                db: SessionLocal = Depends(get_db), limit: Optional[int] = None):
+    return crud.get_reports(db, limit=limit)
 
 
 @app.get("/plant")
