@@ -398,10 +398,11 @@ def create_client(client: schemas.ClientCreate, db: SessionLocal = Depends(get_d
     return crud.create_client(db=db, client=client)
 
 
-@app.put("/change_password")
-def change_password(new_password: str, old_password: str, current_user: schemas.User = Depends(get_current_user),
+@app.put("/change-password")
+def change_password(passwords: models.Password, current_user: schemas.User = Depends(get_current_user),
                     db: SessionLocal = Depends(get_db)):
-    return crud.change_password(db=db, user_id=current_user.id, new_password=new_password, old_password=old_password)
+    return crud.change_password(db=db, user_id=current_user.id, new_password=passwords.new_password,
+                                old_password=passwords.old_password)
 
 
 @app.put("/report/edit")
@@ -431,6 +432,11 @@ def edit_plant(plant_id: int, plant: schemas.PlantCreate, db: SessionLocal = Dep
 def edit_machine(machine_id: int, machine: schemas.MachineCreate, db: SessionLocal = Depends(get_db),
                  current_user: models.User = Depends(is_admin)):
     return crud.edit_machine(db=db, machine_id=machine_id, machine=machine)
+
+
+@app.put("/user/edit")
+def edit_user(user_id: int, user: schemas.UserUpdate, db: SessionLocal = Depends(get_db)):
+    return crud.edit_user(db=db, user=user, user_id=user_id)
 
 
 @app.delete("/report/delete")

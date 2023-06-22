@@ -612,8 +612,24 @@ def change_password(db: SessionLocal, old_password: str, new_password: str, user
     user = db.query(models.User).get(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="La password deve essere lunga almeno 8 caratteri")
+    if ' ' in new_password:
+        raise HTTPException(status_code=400, detail="La password non può contenere spazi")
+    if old_password == new_password:
+        raise HTTPException(status_code=400, detail="La password nuova deve essere diversa da quella attuale")
     if not auth.verify_password(old_password, user.password):
         raise HTTPException(status_code=400, detail="Password errata")
     user.password = auth.get_password_hash(new_password)
     db.commit()
     return {"detail": "Password modificata"}
+
+
+def edit_user(db: SessionLocal, user_id: int, user: schemas.UserUpdate):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user:
+        db_user.email = user.email
+        db_user.phone_number = user.phone_number
+        db.commit()
+        return db_user
+    return {"detail": "Errore"}, 400

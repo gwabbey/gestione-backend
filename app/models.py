@@ -1,4 +1,5 @@
 from passlib.context import CryptContext
+from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time, DateTime
 
 from app.database import Base
@@ -111,3 +112,8 @@ class Role(Base):
     __tablename__ = "roles"
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name = Column(String)
+
+
+class Password(BaseModel):
+    old_password: str
+    new_password: str

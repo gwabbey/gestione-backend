@@ -42,8 +42,9 @@ class UserRegister(BaseModel):
         orm_mode = True
 
 
-class UserUpdate(UserBase):
-    pass
+class UserUpdate(BaseModel):
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
 
 
 class User(UserBase):
