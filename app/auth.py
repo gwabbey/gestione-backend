@@ -64,7 +64,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: SessionLocal
         token_data = schemas.TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    user = db.query(models.User).filter(models.User.username == token_data.username).first()
+    user = db.query(models.User).filter(models.User.username == token_data.username).join(models.Client,
+                                                                                          models.User.client_id == models.Client.id).first()
     if user is None:
         raise credentials_exception
     return user
@@ -75,7 +76,7 @@ async def get_current_active_user(current_user: models.User = Depends(get_curren
 
 
 async def is_admin(current_user: models.User = Depends(get_current_user)):
-    if not current_user.role == "admin":
+    if not current_user.role_id == 1:
         raise HTTPException(status_code=403, detail="Non sei autorizzato a fare questa operazione.")
     return current_user
 

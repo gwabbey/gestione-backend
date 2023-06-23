@@ -4,8 +4,9 @@ from datetime import timedelta
 from io import BytesIO
 from typing import Optional
 
+import xmltodict
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, status, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
 from jinja2 import Template
 from pydantic import BaseSettings
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI()  # openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 
 openapi_url = settings.openapi_url
 
@@ -176,7 +177,7 @@ def get_interval_commission_reports(start_date: Optional[str] = None, end_date: 
 @app.get("/reports/daily")
 def get_daily_hours_in_month(month: str, user_id: Optional[int] = None, db: SessionLocal = Depends(get_db),
                              current_user: models.User = Depends(get_current_user)):
-    if current_user.role != 'admin':
+    if current_user.role_id != 1:
         raise HTTPException(status_code=403, detail="Non sei autorizzato ad accedere a questa risorsa")
     return crud.get_daily_hours_in_month(month=month, db=db, user_id=user_id)
 
@@ -188,7 +189,7 @@ def get_report_by_id(report_id: int, db: SessionLocal = Depends(get_db),
     if report is None:
         raise HTTPException(status_code=404, detail="Intervento non trovato")
     if db.query(models.Report).filter(
-            models.Report.id == report_id).first().operator_id != current_user.id and current_user.role != 'admin':
+            models.Report.id == report_id).first().operator_id != current_user.id and current_user.role != 1:
         raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questo intervento")
     return report
 
@@ -299,14 +300,15 @@ def get_csv_monthly_commission_reports(month: str, db: SessionLocal = Depends(ge
     return FileResponse('app/test.csv', filename=filename)
 
 
-@app.get("/me", response_model=schemas.User)
+@app.get("/me")
 async def get_profile(current_user: models.User = Depends(get_current_active_user)):
     return current_user
 
 
 @app.get("/me/reports")
-def get_my_reports(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
-    return crud.get_reports(db=db, user_id=current_user.id)
+def get_my_reports(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
+                   limit: Optional[int] = None):
+    return crud.get_reports(db=db, user_id=current_user.id, limit=limit)
 
 
 @app.get("/me/commissions")
@@ -473,3 +475,60 @@ def delete_plants(plant_id: int, db: SessionLocal = Depends(get_db),
 def delete_machine(machine_id: int, db: SessionLocal = Depends(get_db),
                    current_user: models.User = Depends(is_admin)):
     return crud.delete_machine(db=db, machine_id=machine_id)
+
+
+@app.post("/upload-xml")
+def upload_xml(file: UploadFile):
+    if file.filename.endswith('.xml') or file.filename.endswith('.XML'):
+        try:
+            xml = xmltodict.parse(file.file)
+            xml = list(xml.values())[0]
+            info1 = xml['FatturaElettronicaHeader']['CedentePrestatore']
+            info2 = xml['FatturaElettronicaBody']['DatiBeniServizi']['DatiRiepilogo']
+            general_info = xml['FatturaElettronicaBody']['DatiGenerali']['DatiGeneraliDocumento']
+            parsed = xml['FatturaElettronicaBody']['DatiBeniServizi']['DettaglioLinee']
+            with open('app/test.csv', 'w', newline='') as csvfile:
+                csvwriter = csv.writer(csvfile, delimiter=';')
+                csvwriter.writerow(['Data documento', general_info['Data']])
+                csvwriter.writerow(['Numero documento', general_info['Numero']])
+                csvwriter.writerow(['Tipologia documento', general_info['TipoDocumento']])
+                csvwriter.writerow(['Identificativo fiscale',
+                                    info1['DatiAnagrafici']['IdFiscaleIVA']['IdPaese'] +
+                                    info1['DatiAnagrafici']['IdFiscaleIVA']['IdCodice']])
+                csvwriter.writerow(['Codice fiscale', info1['DatiAnagrafici']['IdFiscaleIVA']['IdCodice']])
+                csvwriter.writerow(['Denominazione', info1['DatiAnagrafici']['Anagrafica']['Denominazione']])
+                csvwriter.writerow(['Regime fiscale', info1['DatiAnagrafici']['RegimeFiscale']])
+                csvwriter.writerow(['Indirizzo', info1['Sede']['Indirizzo']])
+                csvwriter.writerow(['Comune', info1['Sede']['Comune'] + ' (' + info1['Sede']['Provincia'] + ')'])
+                csvwriter.writerow(['CAP', info1['Sede']['CAP']])
+                csvwriter.writerow(['Nazione', info1['Sede']['Nazione']])
+                csvwriter.writerow([''])
+                csvwriter.writerow(
+                    ['Codice', 'Descrizione', 'Quantità', 'Prezzo unitario', 'Unità di misura', 'Sconto', 'IVA',
+                     'Totale'])
+                for line in parsed:
+                    if line.get('CodiceArticolo', None):
+                        full_code = line['CodiceArticolo']['CodiceValore'] + '\r(' + line['CodiceArticolo'][
+                            'CodiceTipo'] + ')'
+                        unit = line['UnitaMisura']
+                    else:
+                        full_code = ''
+                        unit = ''
+                    csvwriter.writerow(
+                        [full_code,
+                         line['Descrizione'], line['Quantita'], line['PrezzoUnitario'],
+                         unit, line.get('ScontoMaggiorazione', {}).get('Percentuale', None), line['AliquotaIVA'],
+                         line['PrezzoTotale']])
+                csvwriter.writerow([''])
+                csvwriter.writerow(['Totale imponibile', info2['ImponibileImporto']])
+                csvwriter.writerow(['Totale imposta', info2['Imposta']])
+                csvwriter.writerow(['Totale documento', general_info['ImportoTotaleDocumento']])
+                if xml['FatturaElettronicaBody'].get('DatiPagamento', {}).get('ModalitaPagamento', None):
+                    payment_info = xml['FatturaElettronicaBody']['DatiPagamento']
+                    csvwriter.writerow(['Modalità di pagamento', payment_info['ModalitaPagamento']])
+                    csvwriter.writerow(['Data di scadenza', payment_info['DataScadenzaPagamento']])
+            return FileResponse('app/test.csv', filename=file.filename + '.csv')
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        raise HTTPException(status_code=400, detail='Errore')

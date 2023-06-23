@@ -16,7 +16,7 @@ def get_plant_by_client(db: SessionLocal, client_id: int):
 
 
 def get_machine_by_plant(db: SessionLocal, plant_id: int):
-    return db.query(models.Machine).filter(models.Machine.plant_id == plant_id).all()
+    return db.query(models.Machine).filter(models.Machine.plant_id == plant_id).order_by(models.Machine.code).all()
 
 
 def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
@@ -455,13 +455,9 @@ def create_user(db: SessionLocal, user: schemas.UserCreate):
         raise HTTPException(status_code=400, detail="Email già registrata")
     tmp_password = user.password if user.password else pwd.genword()
     tmp_password_hashed = auth.get_password_hash(tmp_password)
-    if user.role == 'Operatore':
-        user.role = 'user'
-    if user.role == 'Dirigente':
-        user.role = 'admin'
     db_user = models.User(first_name=user.first_name, last_name=user.last_name, email=user.email,
-                          phone_number=user.phone_number, username=user.username, role=user.role,
-                          temp_password=tmp_password, password=tmp_password_hashed)
+                          phone_number=user.phone_number, username=user.username, role_id=user.role_id,
+                          client_id=user.client_id, temp_password=tmp_password, password=tmp_password_hashed)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -470,7 +466,7 @@ def create_user(db: SessionLocal, user: schemas.UserCreate):
 
 def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
     user = db.query(models.User).get(user_id)
-    if user_id == 1 or user_id == current_user_id or user.role == 'admin':
+    if user_id == 1 or user_id == current_user_id or user.role_id == 1:
         raise HTTPException(status_code=403, detail="Non puoi eliminare questo utente")
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
@@ -534,7 +530,7 @@ def delete_report(db: SessionLocal, report_id: int, user_id: int):
     user = db.query(models.User).get(user_id)
     if not report:
         raise HTTPException(status_code=404, detail="Intervento non trovato")
-    if report.operator_id != user_id and user.role != 'admin':
+    if report.operator_id != user_id and user.role_id != 1:
         raise HTTPException(status_code=403, detail="Non sei autorizzato a eliminare questo intervento")
     db.delete(report)
     db.commit()

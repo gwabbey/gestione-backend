@@ -10,6 +10,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class User(Base):
     __tablename__ = "operators"
     id = Column(Integer, primary_key=True, index=True, unique=True)
+    role_id = Column(Integer, ForeignKey("roles.id"))
+    client_id = Column(Integer, ForeignKey("clients.id"))
     first_name = Column(String)
     last_name = Column(String)
     email = Column(String, unique=True, index=True)
@@ -17,7 +19,6 @@ class User(Base):
     password = Column(String)
     temp_password = Column(String)
     phone_number = Column(String)
-    role = Column(String)
 
     def verify_password(self, password: str):
         return pwd_context.verify(password, self.password)
@@ -37,7 +38,7 @@ class Client(Base):
     date_created = Column(DateTime)
 
 
-class Plant(Base):  # stabilimento
+class Plant(Base):
     __tablename__ = "plants"
     id = Column(Integer, primary_key=True, index=True, unique=True)
     client_id = Column(Integer, ForeignKey("clients.id"))

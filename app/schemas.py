@@ -19,7 +19,8 @@ class UserBase(BaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
     username: Optional[str] = None
-    role: Optional[str] = None
+    role_id: int
+    client_id: int
 
 
 class UserCreate(BaseModel):
@@ -28,7 +29,8 @@ class UserCreate(BaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
     username: Optional[str] = None
-    role: Optional[str] = None
+    role_id: int
+    client_id: int
     password: Optional[str] = None
 
     class Config:
