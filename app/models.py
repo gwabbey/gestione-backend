@@ -1,6 +1,6 @@
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Time, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, DateTime
 
 from app.database import Base
 

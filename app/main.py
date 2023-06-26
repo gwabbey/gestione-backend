@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-app = FastAPI()  # openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
+app = FastAPI(openapi_url=settings.openapi_url, docs_url=None, redoc_url=None)
 
 openapi_url = settings.openapi_url
 
@@ -189,7 +189,7 @@ def get_report_by_id(report_id: int, db: SessionLocal = Depends(get_db),
     if report is None:
         raise HTTPException(status_code=404, detail="Intervento non trovato")
     if db.query(models.Report).filter(
-            models.Report.id == report_id).first().operator_id != current_user.id and current_user.role != 1:
+            models.Report.id == report_id).first().operator_id != current_user.id and current_user.role_id != 1:
         raise HTTPException(status_code=403, detail="Non sei autorizzato a vedere questo intervento")
     return report
 
@@ -222,6 +222,33 @@ def get_csv_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
              'Location', 'Descrizione'])
         filename = 'interventi_' + month + '.csv'
 
+        for report in reports:
+            csvwriter.writerow([report.first_name + ' ' + report.last_name, report.Report.date.strftime("%d/%m/%Y"),
+                                report.client_name,
+                                report.plant_city + ' ' + report.plant_address,
+                                report.Report.intervention_duration.replace('.', ','),
+                                report.Report.intervention_type, report.machine_name,
+                                report.cost_center, report.Report.intervention_location,
+                                report.Report.description])
+        total_hours = [report.Report.intervention_duration for report in reports]
+        total_hours = sum([float(i.replace(',', '.')) for i in total_hours])
+        csvwriter.writerow('')
+        csvwriter.writerow(['Totale ore', '', '', '', str(total_hours).replace('.', ','), '', '', '', '', ''])
+    return FileResponse('app/test.csv', filename=filename)
+
+
+@app.get("/reports/interval/csv")
+def get_csv_interval_reports(start_date: str, end_date: str, db: SessionLocal = Depends(get_db),
+                             user_id: Optional[int] = None, client_id: Optional[int] = None,
+                             plant_id: Optional[int] = None, work_id: Optional[int] = None):
+    reports = crud.get_interval_reports(start_date=start_date, end_date=end_date, user_id=user_id, client_id=client_id,
+                                        plant_id=plant_id, work_id=work_id, db=db)
+    with open('app/test.csv', 'w', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=';')
+        csvwriter.writerow(
+            ['Operatore', 'Data', 'Cliente', 'Stabilimento', 'Durata', 'Tipo', 'Macchina', 'Centro di costo',
+             'Location', 'Descrizione'])
+        filename = 'interventi_' + '.csv'
         for report in reports:
             csvwriter.writerow([report.first_name + ' ' + report.last_name, report.Report.date.strftime("%d/%m/%Y"),
                                 report.client_name,
@@ -275,6 +302,46 @@ def get_pdf_monthly_commission_reports(month: str, db: SessionLocal = Depends(ge
     return Response(content=output.getvalue(), media_type="application/pdf")
 
 
+@app.get("/reports/interval/pdf")
+def get_pdf_interval_reports(start_date: Optional[str] = None, end_date: Optional[str] = None,
+                             db: SessionLocal = Depends(get_db), user_id: Optional[int] = None,
+                             client_id: Optional[int] = None, plant_id: Optional[int] = None,
+                             work_id: Optional[int] = None):
+    merger = PdfWriter()
+    reports = crud.get_interval_reports(start_date=start_date, end_date=end_date, user_id=user_id, client_id=client_id,
+                                        plant_id=plant_id, work_id=work_id, db=db)
+    for report in reports:
+        with open('app/result.html') as file:
+            template = Template(file.read())
+        rendered_html = template.render(report=report)
+        pdf = HTML(string=rendered_html).write_pdf(presentational_hints=True)
+        merger.append(BytesIO(pdf))
+    output = BytesIO()
+    merger.write(output)
+    output.seek(0)
+    return Response(content=output.getvalue(), media_type="application/pdf")
+
+
+@app.get("/reports/interval/commissions/pdf")
+def get_pdf_interval_commission_reports(start_date: Optional[str] = None, end_date: Optional[str] = None,
+                                        db: SessionLocal = Depends(get_db),
+                                        user_id: Optional[int] = None, client_id: Optional[int] = None,
+                                        work_id: Optional[int] = None):
+    merger = PdfWriter()
+    reports = crud.get_interval_commission_reports(start_date=start_date, end_date=end_date, user_id=user_id,
+                                                   client_id=client_id, work_id=work_id, db=db)
+    for report in reports:
+        with open('app/result.html') as file:
+            template = Template(file.read())
+        rendered_html = template.render(report=report)
+        pdf = HTML(string=rendered_html).write_pdf(presentational_hints=True)
+        merger.append(BytesIO(pdf))
+    output = BytesIO()
+    merger.write(output)
+    output.seek(0)
+    return Response(content=output.getvalue(), media_type="application/pdf")
+
+
 @app.get("/reports/monthly/commissions/csv")
 def get_csv_monthly_commission_reports(month: str, db: SessionLocal = Depends(get_db),
                                        user_id: Optional[int] = None, client_id: Optional[int] = None,
@@ -286,6 +353,32 @@ def get_csv_monthly_commission_reports(month: str, db: SessionLocal = Depends(ge
         csvwriter.writerow(
             ['Operatore', 'Data', 'Cliente', 'Commessa', 'Durata', 'Tipo', 'Location', 'Descrizione'])
         filename = 'interventi_' + month + '.csv'
+        for report in reports:
+            csvwriter.writerow([report.first_name + ' ' + report.last_name, report.Report.date.strftime("%d/%m/%Y"),
+                                report.client_name,
+                                report.commission_code + ' - ' + report.commission_description,
+                                report.Report.intervention_duration.replace('.', ','),
+                                report.Report.intervention_type, report.Report.intervention_location,
+                                report.Report.description])
+        total_hours = [report.Report.intervention_duration for report in reports]
+        total_hours = sum([float(i.replace(',', '.')) for i in total_hours])
+        csvwriter.writerow('')
+        csvwriter.writerow(['Totale ore', '', '', '', str(total_hours).replace('.', ','), '', '', ''])
+    return FileResponse('app/test.csv', filename=filename)
+
+
+@app.get("/reports/interval/commissions/csv")
+def get_csv_interval_commission_reports(start_date: str, end_date: str, db: SessionLocal = Depends(get_db),
+                                        user_id: Optional[int] = None, client_id: Optional[int] = None,
+                                        work_id: Optional[int] = None):
+    reports = crud.get_interval_commission_reports(start_date=start_date, end_date=end_date, user_id=user_id,
+                                                   client_id=client_id, work_id=work_id,
+                                                   db=db)
+    with open('app/test.csv', 'w', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=';')
+        csvwriter.writerow(
+            ['Operatore', 'Data', 'Cliente', 'Commessa', 'Durata', 'Tipo', 'Location', 'Descrizione'])
+        filename = 'interventi.csv'
         for report in reports:
             csvwriter.writerow([report.first_name + ' ' + report.last_name, report.Report.date.strftime("%d/%m/%Y"),
                                 report.client_name,
@@ -508,20 +601,33 @@ def upload_xml(file: UploadFile):
                      'Totale'])
                 for line in parsed:
                     if line.get('CodiceArticolo', None):
-                        full_code = line['CodiceArticolo']['CodiceValore'] + '\r(' + line['CodiceArticolo'][
-                            'CodiceTipo'] + ')'
-                        unit = line['UnitaMisura']
+                        full_code = ''
+                        if type(line['CodiceArticolo']) == list:
+                            for value in line['CodiceArticolo']:
+                                full_code += value['CodiceValore'] + '\r(' + value['CodiceTipo'] + ')\r'
+                        else:
+                            full_code = line['CodiceArticolo']['CodiceValore'] + '\r(' + \
+                                        line['CodiceArticolo']['CodiceTipo'] + ')'
                     else:
                         full_code = ''
-                        unit = ''
                     csvwriter.writerow(
                         [full_code,
-                         line['Descrizione'], line['Quantita'], line['PrezzoUnitario'],
-                         unit, line.get('ScontoMaggiorazione', {}).get('Percentuale', None), line['AliquotaIVA'],
+                         line['Descrizione'], line.get('Quantita', None), line['PrezzoUnitario'],
+                         line.get('UnitaMisura', None), line.get('ScontoMaggiorazione', {}).get('Percentuale', None),
+                         line['AliquotaIVA'],
                          line['PrezzoTotale']])
                 csvwriter.writerow([''])
-                csvwriter.writerow(['Totale imponibile', info2['ImponibileImporto']])
-                csvwriter.writerow(['Totale imposta', info2['Imposta']])
+                if type(info2) == list:
+                    for value in info2:
+                        csvwriter.writerow(['Aliquota IVA', value['AliquotaIVA']])
+                        csvwriter.writerow(['Totale imponibile', value['ImponibileImporto']])
+                        csvwriter.writerow(['Totale imposta', value['Imposta']])
+                        csvwriter.writerow(['', ''])
+                else:
+                    csvwriter.writerow(['Aliquota IVA', info2['AliquotaIVA']])
+                    csvwriter.writerow(['Totale imponibile', info2['ImponibileImporto']])
+                    csvwriter.writerow(['Totale imposta', info2['Imposta']])
+                    csvwriter.writerow(['', ''])
                 csvwriter.writerow(['Totale documento', general_info['ImportoTotaleDocumento']])
                 if xml['FatturaElettronicaBody'].get('DatiPagamento', {}).get('ModalitaPagamento', None):
                     payment_info = xml['FatturaElettronicaBody']['DatiPagamento']
@@ -529,6 +635,6 @@ def upload_xml(file: UploadFile):
                     csvwriter.writerow(['Data di scadenza', payment_info['DataScadenzaPagamento']])
             return FileResponse('app/test.csv', filename=file.filename + '.csv')
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail='Errore')
     else:
         raise HTTPException(status_code=400, detail='Errore')
