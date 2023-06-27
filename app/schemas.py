@@ -47,6 +47,7 @@ class UserRegister(BaseModel):
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
+    client_id: int
 
 
 class User(UserBase):
@@ -65,7 +66,7 @@ class Report(BaseModel):
     intervention_duration: str
     intervention_type: str
     intervention_location: str
-    supervisor: str
+    supervisor_id: int
     description: str
     notes: Optional[str] = None
     trip_kms: Optional[str] = None
@@ -83,7 +84,7 @@ class ReportCreate(BaseModel):
     intervention_duration: str
     intervention_type: str
     intervention_location: str
-    supervisor: str
+    supervisor_id: int
     description: str
     notes: Optional[str] = None
     trip_kms: Optional[str] = None

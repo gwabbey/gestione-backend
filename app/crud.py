@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import HTTPException
 from passlib import pwd
 from sqlalchemy import extract, or_, and_, func, Float
+from sqlalchemy.orm import aliased
 
 import app.auth as auth
 import app.models as models
@@ -81,6 +82,7 @@ def get_reports(db: SessionLocal, user_id: Optional[int] = None, limit: Optional
 
 
 def get_report_by_id(db: SessionLocal, report_id: int):
+    supervisor = aliased(models.User)
     return db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -95,22 +97,25 @@ def get_report_by_id(db: SessionLocal, report_id: int):
         models.User.last_name,
         models.Client.id.label("client_id"),
         models.Client.name.label("client_name"),
+        models.Client.city.label("client_city"),
         models.Plant.id.label("plant_id"),
         models.Plant.name.label("plant_name"),
         models.Plant.city.label("plant_city"),
-        models.Plant.address.label("plant_address")
+        models.Plant.address.label("plant_address"),
+        supervisor.id.label("supervisor_id"),
+        supervisor.first_name.label("supervisor_first_name"),
+        supervisor.last_name.label("supervisor_last_name")
     ).select_from(models.Report).outerjoin(
         models.Commission,
-        and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
-    ).outerjoin(
-        models.Machine,
-        and_(models.Report.type == "machine", models.Report.work_id == models.Machine.id)
-    ).join(models.User, models.Report.operator_id == models.User.id).outerjoin(
+        and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)).outerjoin(
+        models.Machine, and_(models.Report.type == "machine", models.Report.work_id == models.Machine.id)).join(
+        models.User, models.Report.operator_id == models.User.id).outerjoin(
         models.Plant, models.Machine.plant_id == models.Plant.id
     ).join(
         models.Client,
         or_(models.Plant.client_id == models.Client.id, models.Commission.client_id == models.Client.id)
-    ).filter(models.Report.id == report_id).first()
+    ).join(supervisor, models.Report.supervisor_id == supervisor.id
+           ).filter(models.Report.id == report_id).first()
 
 
 def get_months(db: SessionLocal, user_id: Optional[int] = None, client_id: Optional[int] = None):
@@ -349,7 +354,7 @@ def edit_report(db: SessionLocal, report_id: int, report: schemas.ReportCreate, 
         db_report.intervention_type = report.intervention_type
         db_report.intervention_location = report.intervention_location
         db_report.work_id = report.work_id
-        db_report.supervisor = report.supervisor
+        db_report.supervisor_id = report.supervisor_id
         db_report.description = report.description
         db_report.notes = report.notes
         db_report.trip_kms = report.trip_kms
@@ -424,7 +429,10 @@ def edit_machine(db: SessionLocal, machine_id: int, machine: schemas.MachineCrea
 
 
 def get_user_by_id(db: SessionLocal, user_id: int):
-    return db.query(models.User).filter(models.User.id == user_id).first()
+    return db.query(models.User, models.Role.name.label('role'), models.Client.name.label('client_name'),
+                    models.Client.city.label('client_city')).join(models.Role,
+                                                                  models.User.role_id == models.Role.id).join(
+        models.Client, models.User.client_id == models.Client.id).filter(models.User.id == user_id).first()
 
 
 def get_client_by_id(db: SessionLocal, client_id: int):
@@ -550,7 +558,7 @@ def create_report(db: SessionLocal, report: schemas.ReportCreate, user_id: int):
                               intervention_type=report.intervention_type, type=report.type,
                               intervention_location=report.intervention_location,
                               work_id=report.work_id, description=report.description,
-                              supervisor=report.supervisor,
+                              supervisor_id=report.supervisor_id,
                               notes=report.notes, trip_kms=report.trip_kms, cost=report.cost, operator_id=user_id,
                               date_created=datetime.datetime.now())
     db.add(db_report)
@@ -630,6 +638,11 @@ def edit_user(db: SessionLocal, user_id: int, user: schemas.UserUpdate):
     if db_user:
         db_user.email = user.email
         db_user.phone_number = user.phone_number
+        db_user.client_id = user.client_id
         db.commit()
         return db_user
     return {"detail": "Errore"}, 400
+
+
+def get_supervisors_by_client(db: SessionLocal, client_id: int):
+    return db.query(models.User).filter(models.User.client_id == client_id).all()

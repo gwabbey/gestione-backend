@@ -89,7 +89,7 @@ class Report(Base):
     intervention_duration = Column(String)
     intervention_type = Column(String)
     intervention_location = Column(String)
-    supervisor = Column(String)
+    supervisor_id = Column(Integer, ForeignKey("operators.id"))
     description = Column(String)
     notes = Column(String)
     trip_kms = Column(String)
