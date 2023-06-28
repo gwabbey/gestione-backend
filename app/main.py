@@ -505,6 +505,12 @@ def change_password(passwords: models.Password, current_user: schemas.User = Dep
                                 old_password=passwords.old_password)
 
 
+@app.put("/user/reset-password")
+def reset_password(user_id: int, db: SessionLocal = Depends(get_db),
+                   current_user: models.User = Depends(is_admin)):
+    return crud.reset_password(db=db, user_id=user_id)
+
+
 @app.put("/report/edit")
 def edit_report(report_id: int, report: schemas.ReportCreate, user_id: int, db: SessionLocal = Depends(get_db)):
     return crud.edit_report(db=db, report_id=report_id, report=report, user_id=user_id)

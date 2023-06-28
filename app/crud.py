@@ -650,7 +650,8 @@ def reset_password(db: SessionLocal, user_id: int):
         raise HTTPException(status_code=404, detail="Utente non trovato.")
     tmp_password = pwd.genword()
     tmp_password_hashed = auth.get_password_hash(tmp_password)
-    user = models.User(temp_password=tmp_password, password=tmp_password_hashed)
+    user.temp_password = tmp_password
+    user.password = tmp_password_hashed
     db.commit()
     db.refresh(user)
-    return user
+    return {"detail": "Password resettata", "password": tmp_password}
