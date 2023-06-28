@@ -1,6 +1,7 @@
 from passlib.context import CryptContext
 from pydantic import BaseModel
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, DateTime
+from sqlalchemy.orm import deferred
 
 from app.database import Base
 
@@ -16,8 +17,8 @@ class User(Base):
     last_name = Column(String)
     email = Column(String, unique=True, index=True)
     username = Column(String, unique=True, index=True)
-    password = Column(String)
-    temp_password = Column(String)
+    password = deferred(Column(String))
+    temp_password = deferred(Column(String))
     phone_number = Column(String)
 
     def verify_password(self, password: str):

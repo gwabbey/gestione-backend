@@ -474,7 +474,9 @@ def create_user(db: SessionLocal, user: schemas.UserCreate):
 
 def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
     user = db.query(models.User).get(user_id)
-    if user_id == 1 or user_id == current_user_id or user.role_id == 1:
+    if user_id == 1 or user_id == current_user_id or db.query(models.User).filter(
+            models.Report.operator_id == user_id).first() or db.query(models.User).filter(
+            models.Report.supervisor_id == user_id).first():
         raise HTTPException(status_code=403, detail="Non puoi eliminare questo utente")
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
@@ -634,7 +636,8 @@ def edit_user(db: SessionLocal, user_id: int, user: schemas.UserUpdate):
     if db_user:
         db_user.email = user.email
         db_user.phone_number = user.phone_number
-        db_user.client_id = user.client_id
+        if db_user.client_id != user.client_id:
+            db_user.client_id = user.client_id
         db.commit()
         return db_user
     return {"detail": "Errore"}, 400

@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from passlib import pwd
 from passlib.context import CryptContext
 
 import app.models as models
@@ -95,3 +96,16 @@ async def get_current_user_id(token: str = Depends(oauth2_scheme)):
     if not user_id:
         raise HTTPException(status_code=401, detail="Token non valido o scaduto.")
     return user_id
+
+
+def reset_password(db: SessionLocal, user_id: int):
+    user = db.query(models.User).get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato.")
+    tmp_password = pwd.genword()
+    tmp_password_hashed = get_password_hash(tmp_password)
+    user.temp_password = tmp_password
+    user.hashed_password = tmp_password_hashed
+    db.add(user)
+    db.commit()
+    db.refresh(user)

@@ -47,7 +47,7 @@ class UserRegister(BaseModel):
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     phone_number: Optional[str] = None
-    client_id: int
+    client_id: Optional[int] = None
 
 
 class User(UserBase):

@@ -18,7 +18,7 @@ from weasyprint import HTML
 import app.crud as crud
 import app.models as models
 import app.schemas as schemas
-from app.auth import create_access_token, get_current_active_user, get_current_user, is_admin
+from app.auth import create_access_token, get_current_user, is_admin
 from app.database import SessionLocal, engine, get_db
 
 load_dotenv()
@@ -399,8 +399,8 @@ def get_csv_interval_commission_reports(start_date: str, end_date: str, db: Sess
 
 
 @app.get("/me")
-async def get_profile(current_user: models.User = Depends(get_current_active_user)):
-    return current_user
+async def get_profile(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user)):
+    return crud.get_user_by_id(db, user_id=current_user.id)
 
 
 @app.get("/me/reports")
@@ -505,7 +505,7 @@ def change_password(passwords: models.Password, current_user: schemas.User = Dep
                                 old_password=passwords.old_password)
 
 
-@app.put("/user/reset-password")
+@app.put("/reset-password")
 def reset_password(user_id: int, db: SessionLocal = Depends(get_db),
                    current_user: models.User = Depends(is_admin)):
     return crud.reset_password(db=db, user_id=user_id)
