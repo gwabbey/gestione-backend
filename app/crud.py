@@ -21,10 +21,6 @@ def get_machine_by_plant(db: SessionLocal, plant_id: int):
 
 
 def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
-    exists = db.query(models.Machine).filter(models.Machine.code == machine.code).filter(
-        models.Machine.plant_id == machine.plant_id).first()
-    if exists:
-        raise HTTPException(status_code=400, detail="Macchina già registrata")
     db_machine = models.Machine(date_created=datetime.datetime.now(), name=machine.name, code=machine.code,
                                 brand=machine.brand, model=machine.model, serial_number=machine.serial_number,
                                 production_year=machine.production_year, cost_center=machine.cost_center,
@@ -646,3 +642,15 @@ def edit_user(db: SessionLocal, user_id: int, user: schemas.UserUpdate):
 
 def get_supervisors_by_client(db: SessionLocal, client_id: int):
     return db.query(models.User).filter(models.User.client_id == client_id).all()
+
+
+def reset_password(db: SessionLocal, user_id: int):
+    user = db.query(models.User).get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato.")
+    tmp_password = pwd.genword()
+    tmp_password_hashed = auth.get_password_hash(tmp_password)
+    user = models.User(temp_password=tmp_password, password=tmp_password_hashed)
+    db.commit()
+    db.refresh(user)
+    return user
