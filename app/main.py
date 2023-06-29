@@ -6,11 +6,13 @@ from typing import Optional
 
 import xmltodict
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, status, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, status, UploadFile, Form, File
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi_mail import ConnectionConfig, FastMail, MessageType, MessageSchema
 from jinja2 import Template
-from pydantic import BaseSettings
+from pydantic import BaseSettings, EmailStr
 from pypdf import PdfWriter
+from starlette.background import BackgroundTasks
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response, FileResponse
 from weasyprint import HTML
@@ -49,6 +51,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+conf = ConnectionConfig(
+    MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
+    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
+    MAIL_SERVER=os.getenv("MAIL_SERVER"),
+    MAIL_FROM="manutenzione@moveautomation.it",
+    MAIL_PORT=587,
+    MAIL_FROM_NAME="Move Automation S.r.l.",
+    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=False,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True
+)
+
 
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: SessionLocal = Depends(get_db)):
@@ -67,8 +82,13 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 
 @app.get("/users", response_model=list[schemas.User])
-def get_users(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(is_admin)):
+def get_all_users(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(is_admin)):
     return db.query(models.User).order_by(models.User.last_name).all()
+
+
+@app.get("/operators", response_model=list[schemas.User])
+def get_operators(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(is_admin)):
+    return db.query(models.User).order_by(models.User.last_name).filter(models.Role.id == 2).all()
 
 
 @app.get("/clients", response_model=list[schemas.Client])
@@ -226,7 +246,6 @@ def get_csv_monthly_reports(month: str, db: SessionLocal = Depends(get_db),
             ['Operatore', 'Data', 'Cliente', 'Stabilimento', 'Durata', 'Tipo', 'Macchina', 'Centro di costo',
              'Location', 'Descrizione'])
         filename = 'interventi_' + month + '.csv'
-
         for report in reports:
             csvwriter.writerow([report.first_name + ' ' + report.last_name, report.Report.date.strftime("%d/%m/%Y"),
                                 report.client_name,
@@ -668,4 +687,29 @@ def upload_xml(file: UploadFile):
         except Exception as e:
             raise HTTPException(status_code=400, detail='Errore: ' + str(e))
     else:
+        raise HTTPException(status_code=400, detail='Errore')
+
+
+@app.post("/send-email")
+async def send_in_background(report_id: int,
+                             background_tasks: BackgroundTasks,
+                             email: EmailStr = Form(...),
+                             file: UploadFile = File(...),
+                             current_user: models.User = Depends(is_admin),
+                             db: SessionLocal = Depends(get_db)) -> Response:
+    try:
+        report = crud.get_report_by_id(db=db, report_id=report_id)
+        message = MessageSchema(
+            subject=report.last_name.upper() + ' ' + report.first_name.upper() + ' - Intervento ' + report.Report.date.strftime(
+                '%d/%m/%Y'),
+            recipients=[email],
+            body='Buongiorno, in allegato l\'intervento di ' + report.last_name.upper() + ' ' + report.first_name.upper() + ' in data ' + report.Report.date.strftime(
+                '%d/%m/%Y') + ' presso ' + report.client_name + '.',
+            subtype=MessageType.html,
+            attachments=[file]
+        )
+        fm = FastMail(conf)
+        background_tasks.add_task(fm.send_message, message)
+        return Response(status_code=200)
+    except Exception as e:
         raise HTTPException(status_code=400, detail='Errore')

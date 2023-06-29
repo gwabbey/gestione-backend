@@ -1,7 +1,7 @@
 import datetime
-from typing import Optional
+from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class Token(BaseModel):
@@ -236,3 +236,7 @@ class Role(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class Email(BaseModel):
+    email: List[EmailStr]
