@@ -72,6 +72,7 @@ class Report(BaseModel):
     trip_kms: Optional[str] = None
     cost: Optional[str] = None
     date_created: Optional[datetime.datetime] = None
+    email_date: Optional[datetime.datetime] = None
 
     class Config:
         orm_mode = True

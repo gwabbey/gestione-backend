@@ -476,7 +476,7 @@ def delete_user(db: SessionLocal, user_id: int, current_user_id: int):
     user = db.query(models.User).get(user_id)
     if user_id == 1 or user_id == current_user_id or db.query(models.User).filter(
             models.Report.operator_id == user_id).first() or db.query(models.User).filter(
-            models.Report.supervisor_id == user_id).first():
+        models.Report.supervisor_id == user_id).first():
         raise HTTPException(status_code=403, detail="Non puoi eliminare questo utente")
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
@@ -658,3 +658,13 @@ def reset_password(db: SessionLocal, user_id: int):
     db.commit()
     db.refresh(user)
     return {"detail": "Password resettata", "password": tmp_password}
+
+
+def edit_report_email_date(db: SessionLocal, report_id: int, email_date: datetime.datetime):
+    db_report = db.query(models.Report).get(report_id)
+    if not db_report:
+        raise HTTPException(status_code=404, detail="Intervento non trovato")
+    db_report.email_date = email_date
+    db.commit()
+    db.refresh(db_report)
+    return db_report

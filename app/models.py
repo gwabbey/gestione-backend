@@ -96,6 +96,7 @@ class Report(Base):
     trip_kms = Column(String)
     cost = Column(String)
     date_created = Column(DateTime)
+    email_date = Column(DateTime)
 
 
 class InterventionType(Base):

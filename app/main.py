@@ -1,6 +1,6 @@
 import csv
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from io import BytesIO
 from typing import Optional
 
@@ -697,19 +697,36 @@ async def send_in_background(report_id: int,
                              file: UploadFile = File(...),
                              current_user: models.User = Depends(is_admin),
                              db: SessionLocal = Depends(get_db)) -> Response:
-    try:
-        report = crud.get_report_by_id(db=db, report_id=report_id)
-        message = MessageSchema(
-            subject=report.last_name.upper() + ' ' + report.first_name.upper() + ' - Intervento ' + report.Report.date.strftime(
-                '%d/%m/%Y'),
-            recipients=[email],
-            body='Buongiorno, in allegato l\'intervento di ' + report.last_name.upper() + ' ' + report.first_name.upper() + ' in data ' + report.Report.date.strftime(
-                '%d/%m/%Y') + ' presso ' + report.client_name + '.',
-            subtype=MessageType.html,
-            attachments=[file]
-        )
-        fm = FastMail(conf)
-        background_tasks.add_task(fm.send_message, message)
-        return Response(status_code=200)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail='Errore')
+    report = crud.get_report_by_id(db=db, report_id=report_id)
+    message = MessageSchema(
+        subject=report.last_name.upper() + ' ' + report.first_name.upper() + ' - Intervento ' + report.client_name + ' ' + report.Report.date.strftime(
+            '%d/%m/%Y'),
+        recipients=[email],
+        body='<div style="padding-bottom: 20px;">Buongiorno,<br> in allegato l\'intervento di ' + report.last_name.upper() + ' '
+             + report.first_name.upper() + ' in data ' + report.Report.date.strftime(
+            '%d/%m/%Y') + ' presso ' + report.client_name + '.<br><br>'
+                                                            'Il presente intervento è da ritenersi accettato se '
+                                                            'non vi saranno comunicazioni entro 3 giorni '
+                                                            'lavorativi.<br><br>' +
+             'Cordiali saluti<br>Team Manutenzione</div><hr style="width: 50%; margin-left: 0;">'
+             '<div><img src="cid:logo" alt="Move Automation" style="width: 150px; height: auto; padding-top: 20px;"'
+             '></div><div>'
+             '<a href="www.moveautomation.it">www.moveautomation.it</a><br>'
+             'Move Automation S.r.l.<br>'
+             'Via Fornaci, 70<br>'
+             '38068 Rovereto (TN)<br>'
+             '+39.348.2355393</div>',
+        subtype=MessageType.html,
+        attachments=[file,
+                     {
+                         "file": "app/static/logo.png",
+                         "headers": {"Content-ID": "<logo>",
+                                     "Content-Disposition": "inline; filename=\"logo.png\""},
+                         "mime_type": "image",
+                         "mime_subtype": "png",
+                     }]
+    )
+    fm = FastMail(conf)
+    background_tasks.add_task(fm.send_message, message)
+    crud.edit_report_email_date(db=db, report_id=report_id, email_date=datetime.now())
+    return Response(status_code=200)
