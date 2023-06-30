@@ -600,6 +600,15 @@ def get_commissions(db: SessionLocal, client_id: Optional[int] = None):
     return query.order_by(models.Client.name).all()
 
 
+def get_open_commissions(db: SessionLocal, client_id: Optional[int] = None):
+    query = db.query(models.Commission, models.Client).join(models.Client,
+                                                            models.Commission.client_id == models.Client.id)
+    if client_id:
+        query = query.filter(
+            models.Commission.client_id == client_id)
+    return query.filter(models.Commission.status == 'on').order_by(models.Client.name).all()
+
+
 def create_plant(db: SessionLocal, plant: schemas.PlantCreate):
     exists = db.query(models.Plant).filter(models.Plant.address == plant.address).first()
     if exists:

@@ -103,6 +103,14 @@ def get_commissions(db: SessionLocal = Depends(get_db), client_id: Optional[int]
     return crud.get_commissions(db)
 
 
+@app.get("/commissions/open")
+def get_open_commissions(db: SessionLocal = Depends(get_db), client_id: Optional[int] = None,
+                         user_id: Optional[int] = None):
+    if client_id:
+        return crud.get_open_commissions(db, client_id=client_id)
+    return crud.get_open_commissions(db)
+
+
 @app.get("/roles", response_model=list[schemas.Role])
 def get_roles(db: SessionLocal = Depends(get_db)):
     return db.query(models.Role).order_by(models.Role.id).all()
@@ -426,12 +434,6 @@ async def get_profile(db: SessionLocal = Depends(get_db), current_user: schemas.
 def get_my_reports(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
                    limit: Optional[int] = None):
     return crud.get_reports(db=db, user_id=current_user.id, limit=limit)
-
-
-@app.get("/me/commissions")
-def get_user_commissions(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(get_current_user),
-                         client_id: int = None):
-    return crud.get_commissions(db=db, client_id=client_id)
 
 
 @app.get("/user/{user_id}")
