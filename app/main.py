@@ -88,7 +88,7 @@ def get_all_users(db: SessionLocal = Depends(get_db), current_user: schemas.User
 
 @app.get("/operators", response_model=list[schemas.User])
 def get_operators(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(is_admin)):
-    return db.query(models.User).order_by(models.User.last_name).filter(models.Role.id == 2).all()
+    return db.query(models.User).join(models.Role).order_by(models.User.last_name).filter(models.Role.id == 2).all()
 
 
 @app.get("/clients", response_model=list[schemas.Client])

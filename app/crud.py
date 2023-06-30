@@ -650,7 +650,7 @@ def get_supervisors_by_client(db: SessionLocal, client_id: int):
 def reset_password(db: SessionLocal, user_id: int):
     user = db.query(models.User).get(user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="Utente non trovato.")
+        raise HTTPException(status_code=404, detail="Utente non trovato")
     tmp_password = pwd.genword()
     tmp_password_hashed = auth.get_password_hash(tmp_password)
     user.temp_password = tmp_password
