@@ -687,7 +687,11 @@ def close_commission(db: SessionLocal, commission_id: int):
     if not db_commission:
         raise HTTPException(status_code=404, detail="Commessa non trovata")
     if not db_commission.open:
-        raise HTTPException(status_code=400, detail="La commessa è già chiusa")
+        db_commission.open = True
+        db_commission.date_closed = None
+        db.commit()
+        db.refresh(db_commission)
+        return db_commission
     db_commission.open = False
     db_commission.date_closed = datetime.datetime.now(ZoneInfo("Europe/Rome"))
     db.commit()
