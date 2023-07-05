@@ -1,10 +1,9 @@
 import csv
 import os
-from datetime import timedelta, datetime
+from datetime import timedelta
 from io import BytesIO
 from typing import Optional
 
-import pytz
 import xmltodict
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status, UploadFile, Form, File
@@ -64,8 +63,6 @@ conf = ConnectionConfig(
     USE_CREDENTIALS=True,
     VALIDATE_CERTS=True
 )
-
-italy_timezone = pytz.timezone('Europe/Rome')
 
 
 @app.post("/token", response_model=schemas.Token)
@@ -740,5 +737,5 @@ async def send_in_background(report_id: int,
     )
     fm = FastMail(conf)
     background_tasks.add_task(fm.send_message, message)
-    crud.edit_report_email_date(db=db, report_id=report_id, email_date=italy_timezone.localize(datetime.now()))
+    crud.edit_report_email_date(db=db, report_id=report_id, email_date=crud.get_current_time())
     return Response(status_code=200)
