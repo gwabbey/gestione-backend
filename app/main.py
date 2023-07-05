@@ -740,5 +740,5 @@ async def send_in_background(report_id: int,
     )
     fm = FastMail(conf)
     background_tasks.add_task(fm.send_message, message)
-    crud.edit_report_email_date(db=db, report_id=report_id, email_date=datetime.now(italy_timezone))
+    crud.edit_report_email_date(db=db, report_id=report_id, email_date=italy_timezone.localize(datetime.now()))
     return Response(status_code=200)
