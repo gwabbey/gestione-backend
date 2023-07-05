@@ -4,6 +4,7 @@ from datetime import timedelta, datetime
 from io import BytesIO
 from typing import Optional
 
+import pytz
 import xmltodict
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, status, UploadFile, Form, File
@@ -64,6 +65,8 @@ conf = ConnectionConfig(
     VALIDATE_CERTS=True
 )
 
+italy_timezone = pytz.timezone('Europe/Rome')
+
 
 @app.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: SessionLocal = Depends(get_db)):
@@ -97,7 +100,8 @@ def get_clients(db: SessionLocal = Depends(get_db)):
 
 
 @app.get("/commissions")
-def get_commissions(db: SessionLocal = Depends(get_db), client_id: Optional[int] = None, user_id: Optional[int] = None):
+def get_commissions(db: SessionLocal = Depends(get_db), client_id: Optional[int] = None,
+                    current_user: schemas.User = Depends(is_admin)):
     if client_id:
         return crud.get_commissions(db, client_id=client_id)
     return crud.get_commissions(db)
@@ -105,7 +109,7 @@ def get_commissions(db: SessionLocal = Depends(get_db), client_id: Optional[int]
 
 @app.get("/commissions/open")
 def get_open_commissions(db: SessionLocal = Depends(get_db), client_id: Optional[int] = None,
-                         user_id: Optional[int] = None):
+                         current_user: models.User = Depends(get_current_user)):
     if client_id:
         return crud.get_open_commissions(db, client_id=client_id)
     return crud.get_open_commissions(db)
@@ -549,6 +553,12 @@ def edit_commission(commission_id: int, commission: schemas.CommissionCreate, db
     return crud.edit_commission(db=db, commission_id=commission_id, commission=commission)
 
 
+@app.put("/commission/close")
+def close_commission(commission_id: int, db: SessionLocal = Depends(get_db),
+                     current_user: models.User = Depends(is_admin)):
+    return crud.close_commission(db=db, commission_id=commission_id)
+
+
 @app.put("/plant/edit")
 def edit_plant(plant_id: int, plant: schemas.PlantCreate, db: SessionLocal = Depends(get_db),
                current_user: models.User = Depends(is_admin)):
@@ -730,5 +740,5 @@ async def send_in_background(report_id: int,
     )
     fm = FastMail(conf)
     background_tasks.add_task(fm.send_message, message)
-    crud.edit_report_email_date(db=db, report_id=report_id, email_date=datetime.now())
+    crud.edit_report_email_date(db=db, report_id=report_id, email_date=datetime.now(italy_timezone))
     return Response(status_code=200)

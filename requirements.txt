@@ -54,3 +54,5 @@ webencodings==0.5.1
 websockets==11.0.2
 xmltodict==0.13.0
 zopfli==0.2.2
+
+pytz~=2023.3

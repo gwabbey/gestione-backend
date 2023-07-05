@@ -1,6 +1,7 @@
 import datetime
 from typing import Optional
 
+import pytz
 from fastapi import HTTPException
 from passlib import pwd
 from sqlalchemy import extract, or_, and_, func, Float
@@ -10,6 +11,8 @@ import app.auth as auth
 import app.models as models
 import app.schemas as schemas
 from app.database import SessionLocal
+
+italy_timezone = pytz.timezone('Europe/Rome')
 
 
 def get_plant_by_client(db: SessionLocal, client_id: int):
@@ -21,7 +24,8 @@ def get_machine_by_plant(db: SessionLocal, plant_id: int):
 
 
 def create_machine(db: SessionLocal, machine: schemas.MachineCreate):
-    db_machine = models.Machine(date_created=datetime.datetime.now(), name=machine.name, code=machine.code,
+    db_machine = models.Machine(date_created=datetime.datetime.now(italy_timezone), name=machine.name,
+                                code=machine.code,
                                 brand=machine.brand, model=machine.model, serial_number=machine.serial_number,
                                 production_year=machine.production_year, cost_center=machine.cost_center,
                                 description=machine.description, plant_id=machine.plant_id,
@@ -383,7 +387,7 @@ def edit_commission(db: SessionLocal, commission_id: int, commission: schemas.Co
         db_commission.client_id = commission.client_id
         db_commission.code = commission.code
         db_commission.description = commission.description
-        db_commission.status = commission.status
+        db_commission.open = commission.open
         db.commit()
         return db_commission
     return {"detail": "Errore"}, 400
@@ -558,7 +562,7 @@ def create_report(db: SessionLocal, report: schemas.ReportCreate, user_id: int):
                               work_id=report.work_id, description=report.description,
                               supervisor_id=report.supervisor_id,
                               notes=report.notes, trip_kms=report.trip_kms, cost=report.cost, operator_id=user_id,
-                              date_created=datetime.datetime.now())
+                              date_created=datetime.datetime.now(italy_timezone))
     db.add(db_report)
     db.commit()
     db.refresh(db_report)
@@ -569,9 +573,9 @@ def create_commission(db: SessionLocal, commission: schemas.CommissionCreate):
     db_commission = db.query(models.Commission).filter(models.Commission.code == commission.code).first()
     if db_commission:
         raise HTTPException(status_code=400, detail="Codice commessa già registrato")
-    db_commission = models.Commission(date_created=datetime.datetime.now(),
+    db_commission = models.Commission(date_created=datetime.datetime.now(italy_timezone),
                                       code=commission.code, description=commission.description,
-                                      client_id=commission.client_id, status='on')
+                                      client_id=commission.client_id, open=True)
     db.add(db_commission)
     db.commit()
     db.refresh(db_commission)
@@ -584,7 +588,7 @@ def create_client(db: SessionLocal, client: schemas.ClientCreate):
     db_client = models.Client(name=client.name, address=client.address, city=client.city, email=client.email,
                               phone_number=client.phone_number, contact=client.contact, province=client.province,
                               cap=client.cap,
-                              date_created=datetime.datetime.now())
+                              date_created=datetime.datetime.now(italy_timezone))
     db.add(db_client)
     db.commit()
     db.refresh(db_client)
@@ -606,14 +610,14 @@ def get_open_commissions(db: SessionLocal, client_id: Optional[int] = None):
     if client_id:
         query = query.filter(
             models.Commission.client_id == client_id)
-    return query.filter(models.Commission.status == 'on').order_by(models.Client.name).all()
+    return query.filter(models.Commission.open).order_by(models.Client.name).all()
 
 
 def create_plant(db: SessionLocal, plant: schemas.PlantCreate):
     exists = db.query(models.Plant).filter(models.Plant.address == plant.address).first()
     if exists:
         raise HTTPException(status_code=400, detail="Esiste già uno stabilimento con questo indirizzo")
-    db_plant = models.Plant(date_created=datetime.datetime.now(), name=plant.name, address=plant.address,
+    db_plant = models.Plant(date_created=datetime.datetime.now(italy_timezone), name=plant.name, address=plant.address,
                             province=plant.province, cap=plant.cap,
                             city=plant.city, email=plant.email, phone_number=plant.phone_number, contact=plant.contact,
                             client_id=plant.client_id)
@@ -677,3 +681,16 @@ def edit_report_email_date(db: SessionLocal, report_id: int, email_date: datetim
     db.commit()
     db.refresh(db_report)
     return db_report
+
+
+def close_commission(db: SessionLocal, commission_id: int):
+    db_commission = db.query(models.Commission).get(commission_id)
+    if not db_commission:
+        raise HTTPException(status_code=404, detail="Commessa non trovata")
+    if not db_commission.open:
+        raise HTTPException(status_code=400, detail="La commessa è già chiusa")
+    db_commission.open = False
+    db_commission.date_closed = datetime.datetime.now(italy_timezone)
+    db.commit()
+    db.refresh(db_commission)
+    return db_commission

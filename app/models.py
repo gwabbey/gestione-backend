@@ -1,6 +1,6 @@
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, DateTime, Boolean
 from sqlalchemy.orm import deferred
 
 from app.database import Base
@@ -76,8 +76,9 @@ class Commission(Base):
     client_id = Column(Integer, ForeignKey("clients.id"))
     code = Column(String)
     description = Column(String)
-    status = Column(String)
+    open = Column(Boolean)
     date_created = Column(DateTime)
+    date_closed = Column(DateTime)
 
 
 class Report(Base):
