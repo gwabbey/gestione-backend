@@ -14,6 +14,7 @@ from fastapi_mail import ConnectionConfig, FastMail, MessageType, MessageSchema
 from jinja2 import Template
 from pydantic import BaseSettings, EmailStr
 from pypdf import PdfWriter
+from sqlalchemy import or_
 from starlette.background import BackgroundTasks
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import Response, FileResponse
@@ -90,7 +91,8 @@ def get_all_users(db: SessionLocal = Depends(get_db), current_user: schemas.User
 
 @app.get("/operators", response_model=list[schemas.User])
 def get_operators(db: SessionLocal = Depends(get_db), current_user: schemas.User = Depends(is_admin)):
-    return db.query(models.User).join(models.Role).order_by(models.User.last_name).filter(models.Role.id == 2).all()
+    return db.query(models.User).join(models.Role).order_by(models.User.last_name).filter(
+        or_(models.Role.id == 1, models.Role.id == 2)).all()
 
 
 @app.get("/clients", response_model=list[schemas.Client])
