@@ -657,39 +657,48 @@ def upload_xml(file: UploadFile):
                             else:
                                 full_code = line['CodiceArticolo']['CodiceValore'] + '\r(' + \
                                             line['CodiceArticolo']['CodiceTipo'] + ')'
+                        quantity = line.get('Quantita', None).replace('.', ',') if line.get('Quantita') else None
+                        discount = (
+                            line.get('ScontoMaggiorazione', {}).get('Percentuale', None).replace('.', ',') if line.get(
+                                'ScontoMaggiorazione', {}).get('Percentuale', None) is not None else None)
                         csvwriter.writerow(
                             [full_code,
-                             line['Descrizione'], line.get('Quantita', None), line['PrezzoUnitario'],
-                             line.get('UnitaMisura', None),
-                             line.get('ScontoMaggiorazione', {}).get('Percentuale', None),
-                             line['AliquotaIVA'],
-                             line['PrezzoTotale']])
+                             line['Descrizione'], quantity,
+                             line['PrezzoUnitario'].replace('.', ','),
+                             line.get('UnitaMisura', None), discount,
+                             line['AliquotaIVA'].replace('.', ','),
+                             line['PrezzoTotale'].replace('.', ',')])
                 else:
                     if not parsed.get('CodiceArticolo', None):
                         full_code = ''
                     else:
                         full_code = parsed['CodiceArticolo']['CodiceValore'] + '\r(' + parsed['CodiceArticolo'][
                             'CodiceTipo'] + ')'
+                    quantity = parsed.get('Quantita', None).replace('.', ',') if parsed.get('Quantita') else None
+                    discount = (
+                        parsed.get('ScontoMaggiorazione', {}).get('Percentuale', None).replace('.', ',') if parsed.get(
+                            'ScontoMaggiorazione', {}).get('Percentuale', None) is not None else None)
                     csvwriter.writerow(
                         [full_code,
-                         parsed['Descrizione'], parsed.get('Quantita', None), parsed['PrezzoUnitario'],
+                         parsed['Descrizione'], quantity,
+                         parsed['PrezzoUnitario'].replace('.', ','),
                          parsed.get('UnitaMisura', None),
-                         parsed.get('ScontoMaggiorazione', {}).get('Percentuale', None),
-                         parsed['AliquotaIVA'],
-                         parsed['PrezzoTotale']])
+                         discount,
+                         parsed['AliquotaIVA'].replace('.', ','),
+                         parsed['PrezzoTotale'].replace('.', ',')])
                 csvwriter.writerow([''])
                 if type(info2) == list:
                     for value in info2:
-                        csvwriter.writerow(['Aliquota IVA', value['AliquotaIVA']])
-                        csvwriter.writerow(['Totale imponibile', value['ImponibileImporto']])
-                        csvwriter.writerow(['Totale imposta', value['Imposta']])
+                        csvwriter.writerow(['Aliquota IVA', value['AliquotaIVA'].replace('.', ',')])
+                        csvwriter.writerow(['Totale imponibile', value['ImponibileImporto'].replace('.', ',')])
+                        csvwriter.writerow(['Totale imposta', value['Imposta'].replace('.', ',')])
                         csvwriter.writerow(['', ''])
                 else:
-                    csvwriter.writerow(['Aliquota IVA', info2['AliquotaIVA']])
-                    csvwriter.writerow(['Totale imponibile', info2['ImponibileImporto']])
-                    csvwriter.writerow(['Totale imposta', info2['Imposta']])
+                    csvwriter.writerow(['Aliquota IVA', info2['AliquotaIVA'].replace('.', ',')])
+                    csvwriter.writerow(['Totale imponibile', info2['ImponibileImporto'].replace('.', ',')])
+                    csvwriter.writerow(['Totale imposta', info2['Imposta'].replace('.', ',')])
                     csvwriter.writerow(['', ''])
-                csvwriter.writerow(['Totale documento', general_info['ImportoTotaleDocumento']])
+                csvwriter.writerow(['Totale documento', general_info['ImportoTotaleDocumento'].replace('.', ',')])
                 if xml['FatturaElettronicaBody'].get('DatiPagamento', {}).get('ModalitaPagamento', None):
                     payment_info = xml['FatturaElettronicaBody']['DatiPagamento']
                     csvwriter.writerow(['Modalità di pagamento', payment_info['ModalitaPagamento']])
