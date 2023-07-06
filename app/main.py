@@ -711,7 +711,7 @@ def upload_xml(file: UploadFile):
                     csvwriter.writerow(['Modalità di pagamento', payment_info['ModalitaPagamento']])
                     csvwriter.writerow(['Data di scadenza', payment_info['DataScadenzaPagamento']])
             return FileResponse('app/test.csv', filename=file.filename + '.csv')
-        except Exception as e:
+        except Exception:
             raise HTTPException(status_code=400, detail='Errore')
     else:
         raise HTTPException(status_code=400, detail='Errore')
