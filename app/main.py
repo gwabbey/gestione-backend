@@ -616,100 +616,103 @@ def delete_machine(machine_id: int, db: SessionLocal = Depends(get_db),
 @app.post("/upload-xml")
 def upload_xml(file: UploadFile):
     if file.filename.endswith('.xml') or file.filename.endswith('.XML'):
-        xml = xmltodict.parse(file.file)
-        xml = list(xml.values())[0]
-        info1 = xml['FatturaElettronicaHeader']['CedentePrestatore']
-        info2 = xml['FatturaElettronicaBody']['DatiBeniServizi']['DatiRiepilogo']
-        general_info = xml['FatturaElettronicaBody']['DatiGenerali']['DatiGeneraliDocumento']
-        parsed = xml['FatturaElettronicaBody']['DatiBeniServizi']['DettaglioLinee']
-        with open('app/test.csv', 'w', newline='') as csvfile:
-            csvwriter = csv.writer(csvfile, delimiter=';')
-            csvwriter.writerow(['Data documento', general_info['Data']])
-            csvwriter.writerow(['Numero documento', general_info['Numero']])
-            csvwriter.writerow(['Tipologia documento', general_info['TipoDocumento']])
-            csvwriter.writerow(['Identificativo fiscale',
-                                info1['DatiAnagrafici']['IdFiscaleIVA']['IdPaese'] +
-                                info1['DatiAnagrafici']['IdFiscaleIVA']['IdCodice']])
-            csvwriter.writerow(['Codice fiscale', info1['DatiAnagrafici']['IdFiscaleIVA']['IdCodice']])
-            csvwriter.writerow(['Denominazione', info1['DatiAnagrafici']['Anagrafica']['Denominazione']])
-            csvwriter.writerow(['Regime fiscale', info1['DatiAnagrafici']['RegimeFiscale']])
-            csvwriter.writerow(['Indirizzo', info1.get('Sede', {}).get('Indirizzo', None)])
-            if info1.get('Sede', {}).get('Provincia', None):
-                csvwriter.writerow(['Comune',
-                                    info1.get('Sede', {}).get('Comune', None) + ' (' + info1.get('Sede', {}).get(
-                                        'Provincia', None) + ')'])
-            else:
-                csvwriter.writerow(['Comune', info1.get('Sede', {}).get('Comune', None)])
-            csvwriter.writerow(['CAP', info1.get('Sede', {}).get('CAP', None)])
-            csvwriter.writerow(['Nazione', info1.get('Sede', {}).get('Nazione', None)])
-            csvwriter.writerow([''])
-            csvwriter.writerow(
-                ['Codice', 'Descrizione', 'Quantità', 'Prezzo unitario', 'Unità di misura', 'Sconto', 'IVA',
-                 'Totale'])
-            if type(parsed) == list:
-                for line in parsed:
-                    if not line.get('CodiceArticolo', None):
-                        full_code = ''
-                    else:
-                        full_code = ''
-                        if type(line['CodiceArticolo']) == list:
-                            for value in line['CodiceArticolo']:
-                                full_code += value['CodiceValore'] + '\r(' + value['CodiceTipo'] + ')\r'
+        try:
+            xml = xmltodict.parse(file.file)
+            xml = list(xml.values())[0]
+            info1 = xml['FatturaElettronicaHeader']['CedentePrestatore']
+            info2 = xml['FatturaElettronicaBody']['DatiBeniServizi']['DatiRiepilogo']
+            general_info = xml['FatturaElettronicaBody']['DatiGenerali']['DatiGeneraliDocumento']
+            parsed = xml['FatturaElettronicaBody']['DatiBeniServizi']['DettaglioLinee']
+            with open('app/test.csv', 'w', newline='') as csvfile:
+                csvwriter = csv.writer(csvfile, delimiter=';')
+                csvwriter.writerow(['Data documento', general_info['Data']])
+                csvwriter.writerow(['Numero documento', general_info['Numero']])
+                csvwriter.writerow(['Tipologia documento', general_info['TipoDocumento']])
+                csvwriter.writerow(['Identificativo fiscale',
+                                    info1['DatiAnagrafici']['IdFiscaleIVA']['IdPaese'] +
+                                    info1['DatiAnagrafici']['IdFiscaleIVA']['IdCodice']])
+                csvwriter.writerow(['Codice fiscale', info1['DatiAnagrafici']['IdFiscaleIVA']['IdCodice']])
+                csvwriter.writerow(['Denominazione', info1['DatiAnagrafici']['Anagrafica']['Denominazione']])
+                csvwriter.writerow(['Regime fiscale', info1['DatiAnagrafici']['RegimeFiscale']])
+                csvwriter.writerow(['Indirizzo', info1.get('Sede', {}).get('Indirizzo', None)])
+                if info1.get('Sede', {}).get('Provincia', None):
+                    csvwriter.writerow(['Comune',
+                                        info1.get('Sede', {}).get('Comune', None) + ' (' + info1.get('Sede', {}).get(
+                                            'Provincia', None) + ')'])
+                else:
+                    csvwriter.writerow(['Comune', info1.get('Sede', {}).get('Comune', None)])
+                csvwriter.writerow(['CAP', info1.get('Sede', {}).get('CAP', None)])
+                csvwriter.writerow(['Nazione', info1.get('Sede', {}).get('Nazione', None)])
+                csvwriter.writerow([''])
+                csvwriter.writerow(
+                    ['Codice', 'Descrizione', 'Quantità', 'Prezzo unitario', 'Unità di misura', 'Sconto', 'IVA',
+                     'Totale'])
+                if type(parsed) == list:
+                    for line in parsed:
+                        if not line.get('CodiceArticolo', None):
+                            full_code = ''
                         else:
-                            full_code = line['CodiceArticolo']['CodiceValore'] + '\r(' + \
-                                        line['CodiceArticolo']['CodiceTipo'] + ')'
-                    quantity = line.get('Quantita', None).replace('.', ',') if line.get('Quantita') else None
-                    if type(line.get('ScontoMaggiorazione', {})) == list:
-                        discount = ''
-                        for value in line['ScontoMaggiorazione']:
-                            discount += value['Percentuale'].replace('.', ',') + '\r'
+                            full_code = ''
+                            if type(line['CodiceArticolo']) == list:
+                                for value in line['CodiceArticolo']:
+                                    full_code += value['CodiceValore'] + '\r(' + value['CodiceTipo'] + ')\r'
+                            else:
+                                full_code = line['CodiceArticolo']['CodiceValore'] + '\r(' + \
+                                            line['CodiceArticolo']['CodiceTipo'] + ')'
+                        quantity = line.get('Quantita', None).replace('.', ',') if line.get('Quantita') else None
+                        if type(line.get('ScontoMaggiorazione', {})) == list:
+                            discount = ''
+                            for value in line['ScontoMaggiorazione']:
+                                discount += value['Percentuale'].replace('.', ',') + '\r'
+                        else:
+                            discount = line.get('ScontoMaggiorazione', {}).get('Percentuale', None).replace('.',
+                                                                                                            ',') if line.get(
+                                'ScontoMaggiorazione', {}).get('Percentuale', None) else None
+                        csvwriter.writerow(
+                            [full_code,
+                             line['Descrizione'], quantity,
+                             line['PrezzoUnitario'].replace('.', ','),
+                             line.get('UnitaMisura', None), discount,
+                             line['AliquotaIVA'].replace('.', ','),
+                             line['PrezzoTotale'].replace('.', ',')])
+                else:
+                    if not parsed.get('CodiceArticolo', None):
+                        full_code = ''
                     else:
-                        discount = line.get('ScontoMaggiorazione', {}).get('Percentuale', None).replace('.',
-                                                                                                        ',') if line.get(
-                            'ScontoMaggiorazione', {}).get('Percentuale', None) else None
+                        full_code = parsed['CodiceArticolo']['CodiceValore'] + '\r(' + parsed['CodiceArticolo'][
+                            'CodiceTipo'] + ')'
+                    quantity = parsed.get('Quantita', None).replace('.', ',') if parsed.get('Quantita') else None
+                    discount = (
+                        parsed.get('ScontoMaggiorazione', {}).get('Percentuale', None).replace('.', ',') if parsed.get(
+                            'ScontoMaggiorazione', {}).get('Percentuale', None) is not None else None)
                     csvwriter.writerow(
                         [full_code,
-                         line['Descrizione'], quantity,
-                         line['PrezzoUnitario'].replace('.', ','),
-                         line.get('UnitaMisura', None), discount,
-                         line['AliquotaIVA'].replace('.', ','),
-                         line['PrezzoTotale'].replace('.', ',')])
-            else:
-                if not parsed.get('CodiceArticolo', None):
-                    full_code = ''
+                         parsed['Descrizione'], quantity,
+                         parsed['PrezzoUnitario'].replace('.', ','),
+                         parsed.get('UnitaMisura', None),
+                         discount,
+                         parsed['AliquotaIVA'].replace('.', ','),
+                         parsed['PrezzoTotale'].replace('.', ',')])
+                csvwriter.writerow([''])
+                if type(info2) == list:
+                    for value in info2:
+                        csvwriter.writerow(['Aliquota IVA', value['AliquotaIVA'].replace('.', ',')])
+                        csvwriter.writerow(['Totale imponibile', value['ImponibileImporto'].replace('.', ',')])
+                        csvwriter.writerow(['Totale imposta', value['Imposta'].replace('.', ',')])
+                        csvwriter.writerow(['', ''])
                 else:
-                    full_code = parsed['CodiceArticolo']['CodiceValore'] + '\r(' + parsed['CodiceArticolo'][
-                        'CodiceTipo'] + ')'
-                quantity = parsed.get('Quantita', None).replace('.', ',') if parsed.get('Quantita') else None
-                discount = (
-                    parsed.get('ScontoMaggiorazione', {}).get('Percentuale', None).replace('.', ',') if parsed.get(
-                        'ScontoMaggiorazione', {}).get('Percentuale', None) is not None else None)
-                csvwriter.writerow(
-                    [full_code,
-                     parsed['Descrizione'], quantity,
-                     parsed['PrezzoUnitario'].replace('.', ','),
-                     parsed.get('UnitaMisura', None),
-                     discount,
-                     parsed['AliquotaIVA'].replace('.', ','),
-                     parsed['PrezzoTotale'].replace('.', ',')])
-            csvwriter.writerow([''])
-            if type(info2) == list:
-                for value in info2:
-                    csvwriter.writerow(['Aliquota IVA', value['AliquotaIVA'].replace('.', ',')])
-                    csvwriter.writerow(['Totale imponibile', value['ImponibileImporto'].replace('.', ',')])
-                    csvwriter.writerow(['Totale imposta', value['Imposta'].replace('.', ',')])
+                    csvwriter.writerow(['Aliquota IVA', info2['AliquotaIVA'].replace('.', ',')])
+                    csvwriter.writerow(['Totale imponibile', info2['ImponibileImporto'].replace('.', ',')])
+                    csvwriter.writerow(['Totale imposta', info2['Imposta'].replace('.', ',')])
                     csvwriter.writerow(['', ''])
-            else:
-                csvwriter.writerow(['Aliquota IVA', info2['AliquotaIVA'].replace('.', ',')])
-                csvwriter.writerow(['Totale imponibile', info2['ImponibileImporto'].replace('.', ',')])
-                csvwriter.writerow(['Totale imposta', info2['Imposta'].replace('.', ',')])
-                csvwriter.writerow(['', ''])
-            csvwriter.writerow(['Totale documento', general_info['ImportoTotaleDocumento'].replace('.', ',')])
-            if xml['FatturaElettronicaBody'].get('DatiPagamento', {}).get('ModalitaPagamento', None):
-                payment_info = xml['FatturaElettronicaBody']['DatiPagamento']
-                csvwriter.writerow(['Modalità di pagamento', payment_info['ModalitaPagamento']])
-                csvwriter.writerow(['Data di scadenza', payment_info['DataScadenzaPagamento']])
-        return FileResponse('app/test.csv', filename=file.filename + '.csv')
+                csvwriter.writerow(['Totale documento', general_info['ImportoTotaleDocumento'].replace('.', ',')])
+                if xml['FatturaElettronicaBody'].get('DatiPagamento', {}).get('ModalitaPagamento', None):
+                    payment_info = xml['FatturaElettronicaBody']['DatiPagamento']
+                    csvwriter.writerow(['Modalità di pagamento', payment_info['ModalitaPagamento']])
+                    csvwriter.writerow(['Data di scadenza', payment_info['DataScadenzaPagamento']])
+            return FileResponse('app/test.csv', filename=file.filename + '.csv')
+        except Exception as e:
+            raise HTTPException(status_code=400, detail='Errore')
     else:
         raise HTTPException(status_code=400, detail='Errore')
 
