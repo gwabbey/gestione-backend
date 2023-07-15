@@ -642,6 +642,7 @@ def change_password(db: SessionLocal, old_password: str, new_password: str, user
     if not auth.verify_password(old_password, user.password):
         raise HTTPException(status_code=400, detail="Password errata")
     user.password = auth.get_password_hash(new_password)
+    user.temp_password = 'changed'
     db.commit()
     return {"detail": "Password modificata"}
 
