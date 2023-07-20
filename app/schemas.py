@@ -246,3 +246,28 @@ class Role(BaseModel):
 
 class Email(BaseModel):
     email: List[EmailStr]
+
+
+class Ticket(BaseModel):
+    id: int
+    title: str
+    status: str
+    priority: str
+    requested_by: int
+    date_created: datetime.datetime
+    date_edited: datetime.datetime
+    date_closed: datetime.datetime
+    description: str
+
+    class Config:
+        orm_mode = True
+
+
+class TicketCreate(BaseModel):
+    title: str
+    priority: str
+    machine_id: int
+    description: str
+
+    class Config:
+        orm_mode = True

@@ -147,6 +147,16 @@ def get_reports(current_user: models.User = Depends(is_admin),
     return crud.get_reports(db, limit=limit)
 
 
+@app.get("/tickets")
+def get_tickets(current_user: models.User = Depends(is_admin), db: SessionLocal = Depends(get_db)):
+    return crud.get_tickets(db)
+
+
+@app.get("/client")
+def get_my_client(db: SessionLocal = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return crud.get_my_client(db, user_id=current_user.id)
+
+
 @app.get("/plant")
 def get_plant_by_client(db: SessionLocal = Depends(get_db), client_id: int = None):
     return crud.get_plant_by_client(db, client_id=client_id)
@@ -522,6 +532,12 @@ def create_commission(commission: schemas.CommissionCreate, db: SessionLocal = D
 def create_client(client: schemas.ClientCreate, db: SessionLocal = Depends(get_db),
                   current_user: models.User = Depends(is_admin)):
     return crud.create_client(db=db, client=client)
+
+
+@app.post("/ticket/create")
+def create_ticket(ticket: schemas.TicketCreate, db: SessionLocal = Depends(get_db),
+                  current_user: models.User = Depends(get_current_user)):
+    return crud.create_ticket(db=db, ticket=ticket, user_id=current_user.id)
 
 
 @app.put("/change-password")

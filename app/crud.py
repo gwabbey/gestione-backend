@@ -701,3 +701,28 @@ def close_commission(db: SessionLocal, commission_id: int):
     db.commit()
     db.refresh(db_commission)
     return db_commission
+
+
+def create_ticket(db: SessionLocal, ticket: schemas.TicketCreate, user_id: int):
+    db_ticket = models.Ticket(title=ticket.title, status='open', priority=ticket.priority,
+                              date_created=datetime.datetime.now(ZoneInfo("Europe/Rome")),
+                              requested_by=user_id, machine_id=ticket.machine_id, description=ticket.description)
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
+
+def get_tickets(db: SessionLocal):
+    return db.query(models.Ticket, models.Machine).join(models.Machine,
+                                                        models.Ticket.machine_id == models.Machine.id).all()
+
+
+def get_my_client(db: SessionLocal, user_id: int):
+    user = db.query(models.User).get(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    client = db.query(models.Client).get(user.client_id)
+    if not client:
+        raise HTTPException(status_code=404, detail="L'utente non ha un cliente associato")
+    return [client]

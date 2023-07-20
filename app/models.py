@@ -118,6 +118,20 @@ class Role(Base):
     name = Column(String)
 
 
+class Ticket(Base):
+    __tablename__ = "tickets"
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    title = Column(String)
+    status = Column(String)
+    priority = Column(String)
+    date_created = Column(DateTime)
+    date_edited = Column(DateTime)
+    date_closed = Column(DateTime)
+    requested_by = Column(Integer, ForeignKey("operators.id"))
+    machine_id = Column(Integer, ForeignKey("machines.id"))
+    description = Column(String)
+
+
 class Password(BaseModel):
     old_password: str
     new_password: str
