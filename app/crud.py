@@ -131,6 +131,7 @@ def get_months(db: SessionLocal, user_id: Optional[int] = None, client_id: Optio
 def get_monthly_reports(db: SessionLocal, month: Optional[str] = '0', user_id: Optional[int] = 0,
                         client_id: Optional[int] = 0,
                         plant_id: Optional[int] = 0, work_id: Optional[int] = 0):
+    supervisor = aliased(models.User)
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -148,7 +149,10 @@ def get_monthly_reports(db: SessionLocal, month: Optional[str] = '0', user_id: O
         models.Plant.id.label("plant_id"),
         models.Plant.name.label("plant_name"),
         models.Plant.city.label("plant_city"),
-        models.Plant.address.label("plant_address")
+        models.Plant.address.label("plant_address"),
+        supervisor.id.label("supervisor_id"),
+        supervisor.first_name.label("supervisor_first_name"),
+        supervisor.last_name.label("supervisor_last_name")
     ).select_from(models.Report).outerjoin(
         models.Commission,
         and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
@@ -160,7 +164,7 @@ def get_monthly_reports(db: SessionLocal, month: Optional[str] = '0', user_id: O
     ).join(
         models.Client,
         or_(models.Plant.client_id == models.Client.id, models.Commission.client_id == models.Client.id)
-    )
+    ).join(supervisor, models.Report.supervisor_id == supervisor.id)
     if month != '0':
         start_date = datetime.datetime.strptime(month, "%m/%Y").date()
         query = query.filter(
@@ -184,6 +188,7 @@ def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end
                          user_id: Optional[int] = 0,
                          client_id: Optional[int] = 0,
                          plant_id: Optional[int] = 0, work_id: Optional[int] = 0):
+    supervisor = aliased(models.User)
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -201,7 +206,10 @@ def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end
         models.Plant.id.label("plant_id"),
         models.Plant.name.label("plant_name"),
         models.Plant.city.label("plant_city"),
-        models.Plant.address.label("plant_address")
+        models.Plant.address.label("plant_address"),
+        supervisor.id.label("supervisor_id"),
+        supervisor.first_name.label("supervisor_first_name"),
+        supervisor.last_name.label("supervisor_last_name")
     ).select_from(models.Report).outerjoin(
         models.Commission,
         and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
@@ -213,7 +221,7 @@ def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end
     ).join(
         models.Client,
         or_(models.Plant.client_id == models.Client.id, models.Commission.client_id == models.Client.id)
-    )
+    ).join(supervisor, models.Report.supervisor_id == supervisor.id)
     if start_date != '' and end_date != '':
         start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
         end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
@@ -241,6 +249,7 @@ def get_interval_reports(db: SessionLocal, start_date: Optional[str] = None, end
 
 def get_monthly_commission_reports(db: SessionLocal, month: str, user_id: Optional[int] = None,
                                    client_id: Optional[int] = None, work_id: Optional[int] = None):
+    supervisor = aliased(models.User)
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -250,13 +259,16 @@ def get_monthly_commission_reports(db: SessionLocal, month: str, user_id: Option
         models.User.first_name,
         models.User.last_name,
         models.Client.id.label("client_id"),
-        models.Client.name.label("client_name")
+        models.Client.name.label("client_name"),
+        supervisor.id.label("supervisor_id"),
+        supervisor.first_name.label("supervisor_first_name"),
+        supervisor.last_name.label("supervisor_last_name")
     ).select_from(models.Report).join(
         models.Commission,
         and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
     ).join(models.User, models.Report.operator_id == models.User.id).join(
         models.Client, models.Commission.client_id == models.Client.id
-    )
+    ).join(supervisor, models.Report.supervisor_id == supervisor.id)
     if month != '0':
         start_date = datetime.datetime.strptime(month, "%m/%Y").date()
         query = query.filter(
@@ -275,6 +287,7 @@ def get_monthly_commission_reports(db: SessionLocal, month: str, user_id: Option
 def get_interval_commission_reports(db: SessionLocal, start_date: Optional[str] = None, end_date: Optional[str] = None,
                                     user_id: Optional[int] = None,
                                     client_id: Optional[int] = None, work_id: Optional[int] = None):
+    supervisor = aliased(models.User)
     query = db.query(
         models.Report,
         models.Commission.id.label("commission_id"),
@@ -284,13 +297,16 @@ def get_interval_commission_reports(db: SessionLocal, start_date: Optional[str] 
         models.User.first_name,
         models.User.last_name,
         models.Client.id.label("client_id"),
-        models.Client.name.label("client_name")
+        models.Client.name.label("client_name"),
+        supervisor.id.label("supervisor_id"),
+        supervisor.first_name.label("supervisor_first_name"),
+        supervisor.last_name.label("supervisor_last_name")
     ).select_from(models.Report).join(
         models.Commission,
         and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
     ).join(models.User, models.Report.operator_id == models.User.id).join(
         models.Client, models.Commission.client_id == models.Client.id
-    )
+    ).join(supervisor, models.Report.supervisor_id == supervisor.id)
     if start_date != '' and end_date != '':
         start_date_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d")
         end_date_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d")
