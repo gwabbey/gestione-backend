@@ -773,3 +773,10 @@ async def send_in_background(report_id: int,
     background_tasks.add_task(fm.send_message, message)
     crud.edit_report_email_date(db=db, report_id=report_id, email_date=datetime.datetime.now(ZoneInfo("Europe/Rome")))
     return Response(status_code=200)
+
+
+@app.get("/reports/search")
+def search_reports(q: str, db: SessionLocal = Depends(get_db), current_user: models.User = Depends(is_admin)):
+    if not q:
+        return crud.get_reports(db=db, limit=100)
+    return crud.search_reports(db=db, search=q)

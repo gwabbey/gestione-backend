@@ -742,3 +742,54 @@ def get_my_client(db: SessionLocal, user_id: int):
     if not client:
         raise HTTPException(status_code=404, detail="L'utente non ha un cliente associato")
     return [client]
+
+
+def search_reports(db: SessionLocal, search: str):
+    search = '%' + search + '%'
+    return db.query(
+        models.Report,
+        models.Commission.id.label("commission_id"),
+        models.Commission.code.label("commission_code"),
+        models.Machine.id.label("machine_id"),
+        models.Machine.name.label("machine_name"),
+        models.Machine.code.label("machine_code"),
+        models.Machine.cost_center.label("cost_center"),
+        models.User.id.label("operator_id"),
+        models.User.first_name,
+        models.User.last_name,
+        models.Client.id.label("client_id"),
+        models.Client.name.label("client_name"),
+        models.Plant.id.label("plant_id"),
+        models.Plant.city.label("plant_city"),
+        models.Plant.address.label("plant_address")
+    ).select_from(models.Report).outerjoin(
+        models.Commission,
+        and_(models.Report.type == "commission", models.Report.work_id == models.Commission.id)
+    ).outerjoin(
+        models.Machine,
+        and_(models.Report.type == "machine", models.Report.work_id == models.Machine.id)
+    ).outerjoin(models.Plant, models.Machine.plant_id == models.Plant.id).join(
+        models.Client,
+        or_(models.Plant.client_id == models.Client.id, models.Commission.client_id == models.Client.id)
+    ).join(models.User, models.Report.operator_id == models.User.id).filter(
+        or_(
+            models.Report.description.ilike(search),
+            models.Report.notes.ilike(search),
+            models.Report.intervention_type.ilike(search),
+            models.Report.intervention_location.ilike(search),
+            models.Report.intervention_duration.ilike(search),
+            models.Commission.code.ilike(search),
+            models.Commission.description.ilike(search),
+            models.Machine.code.ilike(search),
+            models.Machine.name.ilike(search),
+            models.Machine.brand.ilike(search),
+            models.Machine.model.ilike(search),
+            models.Plant.name.ilike(search),
+            models.Plant.city.ilike(search),
+            models.Plant.address.ilike(search),
+            models.Client.name.ilike(search),
+            models.Client.city.ilike(search),
+            models.User.first_name.ilike(search),
+            models.User.last_name.ilike(search)
+        )
+    ).order_by(models.Report.date).all()
