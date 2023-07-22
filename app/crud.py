@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 from passlib import pwd
-from sqlalchemy import extract, or_, and_, func, Float
+from sqlalchemy import extract, or_, and_, func, Float, text, desc
 from sqlalchemy.orm import aliased
 
 import app.auth as auth
@@ -40,10 +40,28 @@ def get_plants(db: SessionLocal):
         models.Plant.id).all()
 
 
-def get_machines(db: SessionLocal, limit: Optional[int] = None):
-    return db.query(models.Machine, models.Plant, models.Client).join(models.Plant,
-                                                                      models.Machine.plant_id == models.Plant.id).join(
-        models.Client, models.Plant.client_id == models.Client.id).order_by(models.Machine.code).limit(limit).all()
+def get_machines(db: SessionLocal, sort: Optional[str] = None, limit: Optional[int] = None,
+                 order: Optional[str] = None, q: Optional[str] = None):
+    query = db.query(models.Machine, models.Plant, models.Client).join(models.Plant,
+                                                                       models.Machine.plant_id == models.Plant.id).join(
+        models.Client, models.Plant.client_id == models.Client.id)
+    if order:
+        if order == 'desc':
+            query = query.order_by(desc(text(sort)))
+        else:
+            query = query.order_by(text(sort))
+    if not order:
+        query = query.order_by(models.Machine.code)
+    if q:
+        query = query.filter(or_(models.Machine.name.ilike(f"%{q}%"),
+                                 models.Machine.code.ilike(f"%{q}%"),
+                                 models.Machine.brand.ilike(f"%{q}%"),
+                                 models.Machine.production_year.ilike(f"%{q}%"),
+                                 models.Machine.cost_center.ilike(f"%{q}%"),
+                                 models.Plant.city.ilike(f"%{q}%"),
+                                 models.Plant.address.ilike(f"%{q}%"),
+                                 models.Client.name.ilike(f"%{q}%")))
+    return query.limit(limit).all()
 
 
 def get_reports(db: SessionLocal, user_id: Optional[int] = None, limit: Optional[int] = None):

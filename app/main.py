@@ -137,8 +137,9 @@ def get_plants(db: SessionLocal = Depends(get_db)):
 
 
 @app.get("/machines")
-def get_machines(db: SessionLocal = Depends(get_db), limit: Optional[int] = None):
-    return crud.get_machines(db, limit=limit)
+def get_machines(db: SessionLocal = Depends(get_db), limit: Optional[int] = None, sort: Optional[str] = None,
+                 order: Optional[str] = None, q: Optional[str] = None):
+    return crud.get_machines(db, limit=limit, sort=sort, order=order, q=q)
 
 
 @app.get("/reports")
